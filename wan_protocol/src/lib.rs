@@ -1,6 +1,6 @@
 //! # wan_protocol
 //!
-//! 光剑应援棒 / 演出腕带（mini_metalumic）蓝牙协议与加密层。
+//! 光剑应援棒 / 演出宝宝剑（mini_metalumic）蓝牙协议与加密层。
 //!
 //! 从微信小程序反编译代码精确移植，字节级对齐。
 //! 参考来源：`appservice.app.js` 第 840~863 行（util.js / aes-util.js /

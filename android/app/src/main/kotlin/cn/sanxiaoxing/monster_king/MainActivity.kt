@@ -1,4 +1,4 @@
-package com.sanxiaoxing.wanshou
+package cn.sanxiaoxing.monster_king
 
 import io.flutter.embedding.android.FlutterActivity
 

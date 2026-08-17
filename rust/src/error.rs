@@ -9,7 +9,7 @@
 
 use std::fmt;
 
-/// 腕带协议层统一错误。
+/// 宝宝剑协议层统一错误。
 #[derive(Debug)]
 pub enum WanError {
     /// 协议封包/解包错误

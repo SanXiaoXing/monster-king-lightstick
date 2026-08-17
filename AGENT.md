@@ -7,7 +7,7 @@
 
 ## 1. 项目总览
 
-万兽之王光剑/演出腕带 控制 App。协议层从微信小程序（mini_metalumic）
+万兽之王光剑/演出宝宝剑 控制 App。协议层从微信小程序（mini_metalumic）
 反编译代码精确移植，字节级对齐（61 个单元测试，金标准
 `LIGHT_FLASH_HEX = 02000000100004ff020c06104c6a5e52`）。
 
@@ -73,6 +73,10 @@ rust/src/bluetooth/   rust/src/protocol/   # 通信 / 封包
    `flutter_rust_bridge_codegen generate --no-dart-fix --no-dart-format`
 4. **UI 不 import 生成代码**：经 `core/bridge/rust_bridge.dart` 初始化，
    经各 feature Repository 调用。换掉 Rust BLE 为 Native/Mock 时 UI 不动。
+   `ponytail:` 现状 BLE 以 flutter_blue_plus 落地于
+   `features/device/data/device_repository.dart`（Native 实现，扫描按 FFE0
+   服务过滤）；rust/src/bluetooth 骨架保留，就绪后 Repository 换实现，
+   UI 零改动。
 5. **wan_protocol 是已验证资产**：新协议能力先落 wan_protocol（必须带
    测试向量，`cargo test` 全绿），再在 `rust/src/protocol/` 补 re-export。
 6. **glowstick-app-main 只读**：它是 Kotlin 参考实现（BLE 时序/动画帧
@@ -87,7 +91,7 @@ rust/src/bluetooth/   rust/src/protocol/   # 通信 / 封包
 ```
 lib/
 ├── app/
-│   ├── app.dart                      # 根 Widget [已实现]
+│   ├── app.dart                      # 根 Widget [已实现]（首页 = DevicePage 设备连接页）
 │   ├── router/app_router.dart        # 路由表 [骨架]
 │   └── theme/app_theme.dart          # 全局主题 [已实现]
 ├── core/
@@ -97,7 +101,7 @@ lib/
 │   └── storage/local_storage.dart    # 持久化 [骨架]
 ├── features/
 │   ├── home/presentation/protocol_demo_page.dart   # 协议验证页 [已实现]
-│   ├── device/                       # data/domain/presentation [骨架]
+│   ├── device/                       # data/domain/presentation [已实现：flutter_blue_plus 于 Repository 层]
 │   ├── lighting/                     # domain/presentation [骨架]
 │   ├── audio/                        # domain/presentation [骨架]
 │   ├── settings/settings_page.dart   # [骨架]

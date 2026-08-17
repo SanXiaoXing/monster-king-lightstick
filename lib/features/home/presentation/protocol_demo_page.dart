@@ -46,7 +46,7 @@ class _ProtocolDemoPageState extends State<ProtocolDemoPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('腕带协议验证')),
+      appBar: AppBar(title: const Text('宝宝剑协议验证')),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),

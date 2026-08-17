@@ -22,5 +22,4 @@ pub mod bluetooth;
 pub mod error;
 pub mod lightstick;
 pub mod protocol;
-
-// flutter_rust_bridge_codegen generate 会在首次运行时自动添加 `mod frb_generated;`
+pub mod frb_generated;

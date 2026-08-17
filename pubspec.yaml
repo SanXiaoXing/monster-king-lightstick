@@ -37,6 +37,8 @@ dependencies:
   rust_lib_wanshou:
     path: rust_builder
   flutter_rust_bridge: 2.12.0
+  # BLE 通信（Repository 层 Native 实现，见 AGENT.md "换掉 Rust BLE 为 Native/Mock 时 UI 不动"）
+  flutter_blue_plus: ^2.3.12
 
 dev_dependencies:
   flutter_test:

@@ -2,7 +2,7 @@
 name = "wan_protocol"
 version = "0.1.0"
 edition = "2021"
-description = "光剑应援棒 / 演出腕带 蓝牙协议与加密层（从微信小程序 mini_metalumic 移植）"
+description = "光剑应援棒 / 演出宝宝剑 蓝牙协议与加密层（从微信小程序 mini_metalumic 移植）"
 
 [lib]
 name = "wan_protocol"

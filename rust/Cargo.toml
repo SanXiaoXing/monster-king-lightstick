@@ -7,6 +7,8 @@ description = "Flutter Rust Bridge 桥接层，复用 wan_protocol 协议层"
 [lib]
 name = "wan_protocol_frb"
 path = "src/lib.rs"
+# 必须产出 cdylib（.so）供 cargokit 打包进 APK；保留 lib 以支持 cargo test
+crate-type = ["cdylib", "lib"]
 
 [dependencies]
 flutter_rust_bridge = "=2.12.0"

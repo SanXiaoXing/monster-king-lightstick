@@ -6,6 +6,7 @@
 .DS_Store
 .vscode/
 .atom/
+.atomcode/
 .build/
 .buildlog/
 .history
