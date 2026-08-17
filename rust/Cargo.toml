@@ -1,0 +1,16 @@
+[package]
+name = "wan_protocol_frb"
+version = "0.1.0"
+edition = "2024"
+description = "Flutter Rust Bridge 桥接层，复用 wan_protocol 协议层"
+
+[lib]
+name = "wan_protocol_frb"
+path = "src/lib.rs"
+
+[dependencies]
+flutter_rust_bridge = "=2.12.0"
+# 复用已验证的协议层（61 测试通过）
+wan_protocol = { path = "../wan_protocol" }
+# 随机灯光效果（Party/Rainbow/Starry）的随机源
+rand = "0.8"
