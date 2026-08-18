@@ -1,10 +1,8 @@
 //! # 统一错误类型
 //!
 //! 跨模块（bluetooth/protocol/lightstick/audio）共享的错误枚举。
-//! 当前 frb API 仍以"吞错"返回默认值（见 `api/protocol.rs` 注释），
-//! 上线需要向 Flutter 上报错误时，把签名改为 `Result<T, WanError>` 即可。
-//!
-//! `ponytail:` 未在 api/ 启用；启用前需在 frb 端注册 Error 类型。
+//! AES 加解密等 API 已改为 `Result<T, WanError>` 上报（见 `api/protocol.rs`），
+//! frb 已生成对应的 Dart 异常类型；其余骨架模块就绪后沿用同一签名。
 //! 暂不引入 thiserror 依赖，用标准库手写 Display/Error，等用到再换。
 
 use std::fmt;

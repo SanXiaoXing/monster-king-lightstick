@@ -4,10 +4,10 @@
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
 import 'api/protocol.dart';
-import 'api/simple.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi' as ffi;
+import 'error.dart';
 import 'frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_io.dart';
 
@@ -54,6 +54,8 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_io.dart';
 
 @protected void dco_decode_unit(dynamic raw);
 
+@protected WanError dco_decode_wan_error(dynamic raw);
+
 @protected String sse_decode_String(SseDeserializer deserializer);
 
 @protected bool sse_decode_bool(SseDeserializer deserializer);
@@ -84,6 +86,8 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_io.dart';
 
 @protected void sse_decode_unit(SseDeserializer deserializer);
 
+@protected WanError sse_decode_wan_error(SseDeserializer deserializer);
+
 @protected void sse_encode_String(String self, SseSerializer serializer);
 
 @protected void sse_encode_bool(bool self, SseSerializer serializer);
@@ -113,6 +117,8 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_io.dart';
 @protected void sse_encode_u_8(int self, SseSerializer serializer);
 
 @protected void sse_encode_unit(void self, SseSerializer serializer);
+
+@protected void sse_encode_wan_error(WanError self, SseSerializer serializer);
                 }
                 
 

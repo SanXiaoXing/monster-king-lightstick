@@ -6,7 +6,9 @@
 //! - 元组返回 → struct
 //! - 闭包参数（灯光随机效果）→ 内部用 `rand::random`
 //!
-//! `ponytail:` AES 解密失败返回空串（吞错），上线前如需区分错误可改 Result。
+//! AES 加解密失败返回 [`crate::error::WanError`]（frb 已注册，Dart 侧以异常上抛）。
+
+use crate::error::WanError;
 
 /// 9 种灯光效果。frb 生成对应 Dart 枚举。
 #[derive(Clone, Copy, Debug)]
@@ -64,21 +66,26 @@ pub fn crc32_ieee(data: Vec<u8>) -> u32 {
 
 // ── AES-128-ECB ──
 
-/// ponytail: 失败返回空串
-pub fn api_aes_encrypt_hex(plaintext: String) -> String {
-    crate::protocol::api_aes_encrypt_hex(&plaintext).unwrap_or_default()
+/// AES-ECB 加密（API key），失败返回 [`WanError`]。
+pub fn api_aes_encrypt_hex(plaintext: String) -> Result<String, WanError> {
+    crate::protocol::api_aes_encrypt_hex(&plaintext)
+        .map_err(|e| WanError::Protocol(format!("AES 失败: {e}")))
 }
 
-pub fn api_aes_decrypt_hex(ciphertext_hex: String) -> String {
-    crate::protocol::api_aes_decrypt_hex(&ciphertext_hex).unwrap_or_default()
+/// AES-ECB 解密（API key），失败返回 [`WanError`]。
+pub fn api_aes_decrypt_hex(ciphertext_hex: String) -> Result<String, WanError> {
+    crate::protocol::api_aes_decrypt_hex(&ciphertext_hex)
+        .map_err(|e| WanError::Protocol(format!("AES 失败: {e}")))
 }
 
 pub fn report_aes_encrypt(plaintext: String) -> String {
     crate::protocol::report_aes_encrypt(&plaintext)
 }
 
-pub fn report_aes_decrypt(b64: String) -> String {
-    crate::protocol::report_aes_decrypt(&b64).unwrap_or_default()
+/// 设备上报解密，失败返回 [`WanError`]。
+pub fn report_aes_decrypt(b64: String) -> Result<String, WanError> {
+    crate::protocol::report_aes_decrypt(&b64)
+        .map_err(|e| WanError::Protocol(format!("AES 失败: {e}")))
 }
 
 // ── BLE 命令包 ──

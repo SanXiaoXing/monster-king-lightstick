@@ -38,7 +38,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1580087739;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1207780410;
 
 // Section: executor
 
@@ -111,10 +111,8 @@ fn wire__crate__api__protocol__api_aes_decrypt_hex_impl(
             let api_ciphertext_hex = <String>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
-                transform_result_sse::<_, ()>((move || {
-                    let output_ok = Result::<_, ()>::Ok(
-                        crate::api::protocol::api_aes_decrypt_hex(api_ciphertext_hex),
-                    )?;
+                transform_result_sse::<_, crate::error::WanError>((move || {
+                    let output_ok = crate::api::protocol::api_aes_decrypt_hex(api_ciphertext_hex)?;
                     Ok(output_ok)
                 })())
             }
@@ -146,10 +144,8 @@ fn wire__crate__api__protocol__api_aes_encrypt_hex_impl(
             let api_plaintext = <String>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
-                transform_result_sse::<_, ()>((move || {
-                    let output_ok = Result::<_, ()>::Ok(
-                        crate::api::protocol::api_aes_encrypt_hex(api_plaintext),
-                    )?;
+                transform_result_sse::<_, crate::error::WanError>((move || {
+                    let output_ok = crate::api::protocol::api_aes_encrypt_hex(api_plaintext)?;
                     Ok(output_ok)
                 })())
             }
@@ -556,36 +552,6 @@ fn wire__crate__api__protocol__frame_seq_hex_le_impl(
         },
     )
 }
-fn wire__crate__api__simple__greet_impl(
-    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
-    rust_vec_len_: i32,
-    data_len_: i32,
-) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
-        flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "greet",
-            port: None,
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
-        },
-        move || {
-            let message = unsafe {
-                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
-                    ptr_,
-                    rust_vec_len_,
-                    data_len_,
-                )
-            };
-            let mut deserializer =
-                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_name = <String>::sse_decode(&mut deserializer);
-            deserializer.end();
-            transform_result_sse::<_, ()>((move || {
-                let output_ok = Result::<_, ()>::Ok(crate::api::simple::greet(api_name))?;
-                Ok(output_ok)
-            })())
-        },
-    )
-}
 fn wire__crate__api__protocol__hex_to_bytes_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -820,9 +786,8 @@ fn wire__crate__api__protocol__report_aes_decrypt_impl(
             let api_b64 = <String>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
-                transform_result_sse::<_, ()>((move || {
-                    let output_ok =
-                        Result::<_, ()>::Ok(crate::api::protocol::report_aes_decrypt(api_b64))?;
+                transform_result_sse::<_, crate::error::WanError>((move || {
+                    let output_ok = crate::api::protocol::report_aes_decrypt(api_b64)?;
                     Ok(output_ok)
                 })())
             }
@@ -1100,6 +1065,34 @@ impl SseDecode for () {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {}
 }
 
+impl SseDecode for crate::error::WanError {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut tag_ = <i32>::sse_decode(deserializer);
+        match tag_ {
+            0 => {
+                let mut var_field0 = <String>::sse_decode(deserializer);
+                return crate::error::WanError::Protocol(var_field0);
+            }
+            1 => {
+                let mut var_field0 = <String>::sse_decode(deserializer);
+                return crate::error::WanError::Bluetooth(var_field0);
+            }
+            2 => {
+                let mut var_field0 = <String>::sse_decode(deserializer);
+                return crate::error::WanError::Audio(var_field0);
+            }
+            3 => {
+                let mut var_field0 = <String>::sse_decode(deserializer);
+                return crate::error::WanError::Invalid(var_field0);
+            }
+            _ => {
+                unimplemented!("");
+            }
+        }
+    }
+}
+
 fn pde_ffi_dispatcher_primary_impl(
     func_id: i32,
     port: flutter_rust_bridge::for_generated::MessagePort,
@@ -1146,31 +1139,31 @@ fn pde_ffi_dispatcher_primary_impl(
         12 => wire__crate__api__protocol__crc32_ieee_impl(port, ptr, rust_vec_len, data_len),
         13 => wire__crate__api__protocol__dec2hex_impl(port, ptr, rust_vec_len, data_len),
         14 => wire__crate__api__protocol__frame_seq_hex_le_impl(port, ptr, rust_vec_len, data_len),
-        16 => wire__crate__api__protocol__hex_to_bytes_impl(port, ptr, rust_vec_len, data_len),
-        17 => wire__crate__api__simple__init_app_impl(port, ptr, rust_vec_len, data_len),
-        18 => wire__crate__api__protocol__ios_data_to_service_uuids_impl(
+        15 => wire__crate__api__protocol__hex_to_bytes_impl(port, ptr, rust_vec_len, data_len),
+        16 => wire__crate__api__simple__init_app_impl(port, ptr, rust_vec_len, data_len),
+        17 => wire__crate__api__protocol__ios_data_to_service_uuids_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        19 => wire__crate__api__protocol__light_flash_hex_impl(port, ptr, rust_vec_len, data_len),
-        20 => wire__crate__api__protocol__lighting_command_body_impl(
+        18 => wire__crate__api__protocol__light_flash_hex_impl(port, ptr, rust_vec_len, data_len),
+        19 => wire__crate__api__protocol__lighting_command_body_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        21 => wire__crate__api__protocol__little_endian_impl(port, ptr, rust_vec_len, data_len),
-        22 => {
+        20 => wire__crate__api__protocol__little_endian_impl(port, ptr, rust_vec_len, data_len),
+        21 => {
             wire__crate__api__protocol__report_aes_decrypt_impl(port, ptr, rust_vec_len, data_len)
         }
-        23 => {
+        22 => {
             wire__crate__api__protocol__report_aes_encrypt_impl(port, ptr, rust_vec_len, data_len)
         }
-        24 => wire__crate__api__protocol__seat_unbind_hex_impl(port, ptr, rust_vec_len, data_len),
-        25 => wire__crate__api__protocol__seat_write_hex_impl(port, ptr, rust_vec_len, data_len),
-        26 => wire__crate__api__protocol__verify_antifake_impl(port, ptr, rust_vec_len, data_len),
+        23 => wire__crate__api__protocol__seat_unbind_hex_impl(port, ptr, rust_vec_len, data_len),
+        24 => wire__crate__api__protocol__seat_write_hex_impl(port, ptr, rust_vec_len, data_len),
+        25 => wire__crate__api__protocol__verify_antifake_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -1183,7 +1176,6 @@ fn pde_ffi_dispatcher_sync_impl(
 ) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
-        15 => wire__crate__api__simple__greet_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -1236,6 +1228,34 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::protocol::LightingEffect>
     for crate::api::protocol::LightingEffect
 {
     fn into_into_dart(self) -> crate::api::protocol::LightingEffect {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::error::WanError {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            crate::error::WanError::Protocol(field0) => {
+                [0.into_dart(), field0.into_into_dart().into_dart()].into_dart()
+            }
+            crate::error::WanError::Bluetooth(field0) => {
+                [1.into_dart(), field0.into_into_dart().into_dart()].into_dart()
+            }
+            crate::error::WanError::Audio(field0) => {
+                [2.into_dart(), field0.into_into_dart().into_dart()].into_dart()
+            }
+            crate::error::WanError::Invalid(field0) => {
+                [3.into_dart(), field0.into_into_dart().into_dart()].into_dart()
+            }
+            _ => {
+                unimplemented!("");
+            }
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::error::WanError {}
+impl flutter_rust_bridge::IntoIntoDart<crate::error::WanError> for crate::error::WanError {
+    fn into_into_dart(self) -> crate::error::WanError {
         self
     }
 }
@@ -1353,6 +1373,33 @@ impl SseEncode for u8 {
 impl SseEncode for () {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {}
+}
+
+impl SseEncode for crate::error::WanError {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        match self {
+            crate::error::WanError::Protocol(field0) => {
+                <i32>::sse_encode(0, serializer);
+                <String>::sse_encode(field0, serializer);
+            }
+            crate::error::WanError::Bluetooth(field0) => {
+                <i32>::sse_encode(1, serializer);
+                <String>::sse_encode(field0, serializer);
+            }
+            crate::error::WanError::Audio(field0) => {
+                <i32>::sse_encode(2, serializer);
+                <String>::sse_encode(field0, serializer);
+            }
+            crate::error::WanError::Invalid(field0) => {
+                <i32>::sse_encode(3, serializer);
+                <String>::sse_encode(field0, serializer);
+            }
+            _ => {
+                unimplemented!("");
+            }
+        }
+    }
 }
 
 #[cfg(not(target_family = "wasm"))]

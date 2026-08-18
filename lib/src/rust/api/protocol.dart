@@ -3,6 +3,7 @@
 
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
+import '../error.dart';
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
@@ -24,13 +25,15 @@ Future<int>  crc32Hex({required String hex }) => RustLib.instance.api.crateApiPr
 
 Future<int>  crc32Ieee({required List<int> data }) => RustLib.instance.api.crateApiProtocolCrc32Ieee(data: data);
 
-/// ponytail: 失败返回空串
+/// AES-ECB 加密（API key），失败返回 [`WanError`]。
 Future<String>  apiAesEncryptHex({required String plaintext }) => RustLib.instance.api.crateApiProtocolApiAesEncryptHex(plaintext: plaintext);
 
+/// AES-ECB 解密（API key），失败返回 [`WanError`]。
 Future<String>  apiAesDecryptHex({required String ciphertextHex }) => RustLib.instance.api.crateApiProtocolApiAesDecryptHex(ciphertextHex: ciphertextHex);
 
 Future<String>  reportAesEncrypt({required String plaintext }) => RustLib.instance.api.crateApiProtocolReportAesEncrypt(plaintext: plaintext);
 
+/// 设备上报解密，失败返回 [`WanError`]。
 Future<String>  reportAesDecrypt({required String b64 }) => RustLib.instance.api.crateApiProtocolReportAesDecrypt(b64: b64);
 
 Future<String>  buildPacket({required int seq , required String commandBodyHex }) => RustLib.instance.api.crateApiProtocolBuildPacket(seq: seq, commandBodyHex: commandBodyHex);

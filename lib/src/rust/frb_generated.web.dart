@@ -8,9 +8,9 @@
 // ignore_for_file: argument_type_not_assignable
 
 import 'api/protocol.dart';
-import 'api/simple.dart';
 import 'dart:async';
 import 'dart:convert';
+import 'error.dart';
 import 'frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_web.dart';
 
@@ -57,6 +57,8 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_web.dart';
 
 @protected void dco_decode_unit(dynamic raw);
 
+@protected WanError dco_decode_wan_error(dynamic raw);
+
 @protected String sse_decode_String(SseDeserializer deserializer);
 
 @protected bool sse_decode_bool(SseDeserializer deserializer);
@@ -87,6 +89,8 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_web.dart';
 
 @protected void sse_decode_unit(SseDeserializer deserializer);
 
+@protected WanError sse_decode_wan_error(SseDeserializer deserializer);
+
 @protected void sse_encode_String(String self, SseSerializer serializer);
 
 @protected void sse_encode_bool(bool self, SseSerializer serializer);
@@ -116,6 +120,8 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_web.dart';
 @protected void sse_encode_u_8(int self, SseSerializer serializer);
 
 @protected void sse_encode_unit(void self, SseSerializer serializer);
+
+@protected void sse_encode_wan_error(WanError self, SseSerializer serializer);
                 }
                 
 

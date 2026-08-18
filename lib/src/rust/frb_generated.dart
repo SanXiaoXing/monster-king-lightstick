@@ -4,9 +4,9 @@
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
 import 'api/protocol.dart';
-import 'api/simple.dart';
 import 'dart:async';
 import 'dart:convert';
+import 'error.dart';
 import 'frb_generated.dart';
 import 'frb_generated.io.dart' if (dart.library.js_interop) 'frb_generated.web.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
@@ -69,7 +69,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
                   String get codegenVersion => '2.12.0';
 
                   @override
-                  int get rustContentHash => 1580087739;
+                  int get rustContentHash => -1207780410;
 
                   static const kDefaultExternalLibraryLoaderConfig = ExternalLibraryLoaderConfig(
                     stem: 'wan_protocol_frb',
@@ -108,8 +108,6 @@ Future<int> crateApiProtocolCrc32Ieee({required List<int> data });
 Future<String> crateApiProtocolDec2Hex({required BigInt n , required int width });
 
 Future<String> crateApiProtocolFrameSeqHexLe({required int seq });
-
-String crateApiSimpleGreet({required String name });
 
 Future<Uint8List> crateApiProtocolHexToBytes({required String hex });
 
@@ -182,7 +180,7 @@ sse_encode_list_prim_u_8_loose(random16, serializer);
             codec: 
         SseCodec(
           decodeSuccessData: sse_decode_String,
-          decodeErrorData: null,
+          decodeErrorData: sse_decode_wan_error,
         )
         ,
             constMeta: kCrateApiProtocolApiAesDecryptHexConstMeta,
@@ -207,7 +205,7 @@ sse_encode_list_prim_u_8_loose(random16, serializer);
             codec: 
         SseCodec(
           decodeSuccessData: sse_decode_String,
-          decodeErrorData: null,
+          decodeErrorData: sse_decode_wan_error,
         )
         ,
             constMeta: kCrateApiProtocolApiAesEncryptHexConstMeta,
@@ -510,36 +508,11 @@ sse_encode_u_32(width, serializer);
         );
         
 
-@override String crateApiSimpleGreet({required String name })  { return handler.executeSync(SyncTask(
-            callFfi: () {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_String(name, serializer);
-            return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 15)!;
-            
-            },
-            codec: 
-        SseCodec(
-          decodeSuccessData: sse_decode_String,
-          decodeErrorData: null,
-        )
-        ,
-            constMeta: kCrateApiSimpleGreetConstMeta,
-            argValues: [name],
-            apiImpl: this,
-        )); }
-
-
-        TaskConstMeta get kCrateApiSimpleGreetConstMeta => const TaskConstMeta(
-            debugName: "greet",
-            argNames: ["name"],
-        );
-        
-
 @override Future<Uint8List> crateApiProtocolHexToBytes({required String hex })  { return handler.executeNormal(NormalTask(
             callFfi: (port_) {
               
             final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_String(hex, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 16, port: port_);
+            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 15, port: port_);
             
             },
             codec: 
@@ -564,7 +537,7 @@ sse_encode_u_32(width, serializer);
             callFfi: (port_) {
               
             final serializer = SseSerializer(generalizedFrbRustBinding);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 17, port: port_);
+            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 16, port: port_);
             
             },
             codec: 
@@ -589,7 +562,7 @@ sse_encode_u_32(width, serializer);
             callFfi: (port_) {
               
             final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_list_prim_u_8_loose(data, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 18, port: port_);
+            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 17, port: port_);
             
             },
             codec: 
@@ -614,7 +587,7 @@ sse_encode_u_32(width, serializer);
             callFfi: (port_) {
               
             final serializer = SseSerializer(generalizedFrbRustBinding);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 19, port: port_);
+            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 18, port: port_);
             
             },
             codec: 
@@ -641,7 +614,7 @@ sse_encode_u_32(width, serializer);
             final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_lighting_effect(effect, serializer);
 sse_encode_String(colorHex, serializer);
 sse_encode_u_8(seed, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 20, port: port_);
+            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 19, port: port_);
             
             },
             codec: 
@@ -666,7 +639,7 @@ sse_encode_u_8(seed, serializer);
             callFfi: (port_) {
               
             final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_String(hex, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 21, port: port_);
+            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 20, port: port_);
             
             },
             codec: 
@@ -691,13 +664,13 @@ sse_encode_u_8(seed, serializer);
             callFfi: (port_) {
               
             final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_String(b64, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 22, port: port_);
+            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 21, port: port_);
             
             },
             codec: 
         SseCodec(
           decodeSuccessData: sse_decode_String,
-          decodeErrorData: null,
+          decodeErrorData: sse_decode_wan_error,
         )
         ,
             constMeta: kCrateApiProtocolReportAesDecryptConstMeta,
@@ -716,7 +689,7 @@ sse_encode_u_8(seed, serializer);
             callFfi: (port_) {
               
             final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_String(plaintext, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 23, port: port_);
+            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 22, port: port_);
             
             },
             codec: 
@@ -741,7 +714,7 @@ sse_encode_u_8(seed, serializer);
             callFfi: (port_) {
               
             final serializer = SseSerializer(generalizedFrbRustBinding);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 24, port: port_);
+            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 23, port: port_);
             
             },
             codec: 
@@ -769,7 +742,7 @@ sse_encode_u_8(seed, serializer);
 sse_encode_u_16(x1, serializer);
 sse_encode_u_16(y1, serializer);
 sse_encode_opt_box_autoadd_u_8(showNum, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 25, port: port_);
+            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 24, port: port_);
             
             },
             codec: 
@@ -796,7 +769,7 @@ sse_encode_opt_box_autoadd_u_8(showNum, serializer);
             final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_list_prim_u_8_loose(message, serializer);
 sse_encode_list_prim_u_8_loose(signature, serializer);
 sse_encode_list_prim_u_8_loose(publicKey, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 26, port: port_);
+            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 25, port: port_);
             
             },
             codec: 
@@ -867,6 +840,15 @@ return raw as int; }
 @protected void dco_decode_unit(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
 return; }
 
+@protected WanError dco_decode_wan_error(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
+switch (raw[0]) {
+                case 0: return WanError_Protocol(dco_decode_String(raw[1]),);
+case 1: return WanError_Bluetooth(dco_decode_String(raw[1]),);
+case 2: return WanError_Audio(dco_decode_String(raw[1]),);
+case 3: return WanError_Invalid(dco_decode_String(raw[1]),);
+                default: throw Exception("unreachable");
+            } }
+
 @protected String sse_decode_String(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
 var inner = sse_decode_list_prim_u_8_strict(deserializer);
         return utf8.decoder.convert(inner); }
@@ -929,6 +911,16 @@ return deserializer.buffer.getUint8(); }
 @protected void sse_decode_unit(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
  }
 
+@protected WanError sse_decode_wan_error(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
+
+            var tag_ = sse_decode_i_32(deserializer);
+            switch (tag_) { case 0: var var_field0 = sse_decode_String(deserializer);
+return WanError_Protocol(var_field0);case 1: var var_field0 = sse_decode_String(deserializer);
+return WanError_Bluetooth(var_field0);case 2: var var_field0 = sse_decode_String(deserializer);
+return WanError_Audio(var_field0);case 3: var var_field0 = sse_decode_String(deserializer);
+return WanError_Invalid(var_field0); default: throw UnimplementedError(''); }
+             }
+
 @protected void sse_encode_String(String self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
 sse_encode_list_prim_u_8_strict(utf8.encoder.convert(self), serializer); }
 
@@ -983,5 +975,12 @@ serializer.buffer.putUint8(self); }
 
 @protected void sse_encode_unit(void self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
  }
+
+@protected void sse_encode_wan_error(WanError self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
+switch (self) { case WanError_Protocol(field0: final field0): sse_encode_i_32(0, serializer); sse_encode_String(field0, serializer);
+case WanError_Bluetooth(field0: final field0): sse_encode_i_32(1, serializer); sse_encode_String(field0, serializer);
+case WanError_Audio(field0: final field0): sse_encode_i_32(2, serializer); sse_encode_String(field0, serializer);
+case WanError_Invalid(field0: final field0): sse_encode_i_32(3, serializer); sse_encode_String(field0, serializer);
+  } }
                 }
                 
