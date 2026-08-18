@@ -3,6 +3,8 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_theme.dart';
+import '../../../../shared/theme/spacing.dart';
+import '../../../../shared/widgets/app_top_bar.dart';
 import '../../../../shared/widgets/brand_logo.dart';
 import '../../data/device_repository.dart';
 import '../../domain/device_state.dart';
@@ -12,14 +14,11 @@ import '../device_view_model.dart';
 /// 连接页（Dock「连接」Tab）。
 ///
 /// 对齐原型连接屏：连接胶囊 + 「附近设备」标题 + 设备卡片（logo/名称/信号/
-/// 断开按钮）+ 扫描指示。`embedded=true` 时无 AppBar，由 Dock 壳托管。
+/// 断开按钮）+ 扫描指示。顶部统一用 [AppTopBar]（由本页自带 Scaffold 托管）。
 class DevicePage extends StatefulWidget {
-  const DevicePage({super.key, this.viewModel, this.embedded = false});
+  const DevicePage({super.key, this.viewModel});
 
   final DeviceViewModel? viewModel;
-
-  /// true = 作为 Dock Tab 嵌入（无 AppBar，底部留 Dock 高度）；false = 独立推页。
-  final bool embedded;
 
   @override
   State<DevicePage> createState() => _DevicePageState();
@@ -55,22 +54,19 @@ class _DevicePageState extends State<DevicePage> {
               SliverToBoxAdapter(child: _ConnectPill(vm: _vm)),
               const SliverToBoxAdapter(child: _PageHead()),
               SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 18),
+                padding: EdgeInsets.symmetric(horizontal: Spacing.pageMargin),
                 sliver: _DeviceList(vm: _vm),
               ),
               SliverToBoxAdapter(child: _ScanNote(vm: _vm)),
+              // extendBody 下内容延伸到玻璃导航栏下方，留白让末项可滚出遮挡区
+              const SliverToBoxAdapter(child: SizedBox(height: Spacing.bottomSafe)),
             ],
           ),
         );
       },
     );
 
-    if (widget.embedded) {
-      // 导航栏已是 Scaffold.bottomNavigationBar，框架自动在导航栏之上布局，
-      // 不再需要为悬浮 Dock 手动留白。
-      return SafeArea(bottom: false, child: body);
-    }
-    return Scaffold(appBar: AppBar(title: const Text('连接设备')), body: body);
+    return Scaffold(appBar: AppTopBar(title: '附近设备'), body: body);
   }
 
   BoxDecoration _pageDecoration(BuildContext context) {
@@ -106,7 +102,7 @@ class _ConnectPill extends StatelessWidget {
       DeviceConnectionState.disconnected => (scheme.outline, '未连接'),
     };
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
+      padding: EdgeInsets.fromLTRB(Spacing.pageMargin, 12, Spacing.pageMargin, 0),
       child: Align(
         alignment: Alignment.centerLeft,
         child: Container(
@@ -154,27 +150,10 @@ class _PageHead extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 14, 18, 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '附近设备',
-            style: TextStyle(
-              color: scheme.onSurface,
-              fontSize: 26,
-              fontWeight: FontWeight.w700,
-              letterSpacing: -0.4,
-              height: 1.1,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            '点选设备卡片即可配对连接，无需密码。',
-            style: TextStyle(
-                color: scheme.onSurfaceVariant, fontSize: 13, height: 1.55),
-          ),
-        ],
+      padding: EdgeInsets.fromLTRB(Spacing.pageMargin, 14, Spacing.pageMargin, 16),
+      child: Text(
+        '点选设备卡片即可配对连接，无需密码。',
+        style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13, height: 1.55),
       ),
     );
   }
@@ -237,21 +216,21 @@ class _DeviceCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final active = _isActive;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: Spacing.gap12),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(16),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
           child: Material(
             color: (active ? AppColors.accentSoft : scheme.surfaceContainerLow)
                 .withValues(alpha: 0.6),
             child: InkWell(
-              borderRadius: BorderRadius.circular(22),
+              borderRadius: BorderRadius.circular(16),
               onTap: vm.scanning ? null : () => vm.connect(device),
               child: Container(
-                padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+                padding: const EdgeInsets.all(Spacing.cardPadding),
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(22),
+                  borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: active ? scheme.primary : scheme.outlineVariant,
                   ),
@@ -434,7 +413,7 @@ class _ScanNote extends StatelessWidget {
     if (!vm.scanning && vm.devices.isNotEmpty) return const SizedBox.shrink();
     final scheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(22, 14, 18, 0),
+      padding: EdgeInsets.fromLTRB(Spacing.pageMargin, 14, Spacing.pageMargin, 0),
       child: Row(
         children: [
           if (vm.scanning) ...[

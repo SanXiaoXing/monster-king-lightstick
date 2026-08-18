@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
 
 import '../../app/theme/app_theme.dart';
+import '../../shared/theme/spacing.dart';
+import '../../shared/widgets/app_top_bar.dart';
 import '../../shared/widgets/brand_logo.dart';
+import '../../shared/widgets/card_decoration.dart';
 import '../device/presentation/device_view_model.dart';
 
 /// 设置页（Dock「设置」Tab）。
 ///
 /// 对齐原型设置屏：4 分组卡片（我的设备 / 灯光偏好 / 音频律动 / 关于），
-/// 顶部主题模式 SegmentedButton。`embedded=true` 时无 AppBar，由 Dock 壳托管。
+/// 顶部主题模式 SegmentedButton。顶部统一用 [AppTopBar]。
 class SettingsPage extends StatefulWidget {
-  const SettingsPage({super.key, required this.viewModel, this.embedded = false});
+  const SettingsPage({super.key, required this.viewModel});
 
   final DeviceViewModel viewModel;
-  final bool embedded;
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -56,7 +58,7 @@ class _SettingsPageState extends State<SettingsPage> {
         slivers: [
           SliverToBoxAdapter(child: _Heading()),
           SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 18),
+            padding: EdgeInsets.symmetric(horizontal: Spacing.pageMargin),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
                 // 主题模式（顶部独立段）
@@ -91,7 +93,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     },
                   ),
                 ]),
-                const SizedBox(height: 22),
+                const SizedBox(height: Spacing.gap16),
 
                 // 我的设备
                 _SectionLabel('我的设备'),
@@ -123,7 +125,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     onTap: _forgetDevice,
                   ),
                 ]),
-                const SizedBox(height: 22),
+                const SizedBox(height: Spacing.gap16),
 
                 // 灯光偏好
                 _SectionLabel('灯光偏好'),
@@ -161,7 +163,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                   ),
                 ]),
-                const SizedBox(height: 22),
+                const SizedBox(height: Spacing.gap16),
 
                 // 音频律动
                 _SectionLabel('音频律动'),
@@ -196,13 +198,13 @@ class _SettingsPageState extends State<SettingsPage> {
                     onTap: () => _toast('频谱样式暂固定'),
                   ),
                 ]),
-                const SizedBox(height: 22),
+                const SizedBox(height: Spacing.gap16),
 
                 // 关于
                 _SectionLabel('关于'),
                 _GroupCard(children: [
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 16, 14, 16),
+                    padding: EdgeInsets.all(Spacing.cardPadding),
                     child: Row(
                       children: [
                         const BrandLogo(size: Size(20, 36)),
@@ -267,16 +269,13 @@ class _SettingsPageState extends State<SettingsPage> {
               ]),
             ),
           ),
+          // extendBody 下内容延伸到玻璃导航栏下方，留白让末项可滚出遮挡区
+          const SliverToBoxAdapter(child: SizedBox(height: Spacing.bottomSafe)),
         ],
       ),
     );
 
-    if (widget.embedded) {
-      // 导航栏已是 Scaffold.bottomNavigationBar，框架自动在导航栏之上布局，
-      // 不再需要为悬浮 Dock 手动留白。
-      return SafeArea(bottom: false, child: content);
-    }
-    return Scaffold(appBar: AppBar(title: const Text('设置')), body: content);
+    return Scaffold(appBar: AppTopBar(title: '设置'), body: content);
   }
 }
 
@@ -285,22 +284,9 @@ class _Heading extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 14, 18, 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('设置',
-              style: TextStyle(
-                  color: scheme.onSurface,
-                  fontSize: 26,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.4,
-                  height: 1.1)),
-          const SizedBox(height: 6),
-          Text('管理设备、主题、灯光与音频偏好。',
-              style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13, height: 1.55)),
-        ],
-      ),
+      padding: EdgeInsets.fromLTRB(Spacing.pageMargin, 14, Spacing.pageMargin, 16),
+      child: Text('管理设备、主题、灯光与音频偏好。',
+          style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13, height: 1.55)),
     );
   }
 }
@@ -331,11 +317,7 @@ class _GroupCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Container(
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: scheme.outlineVariant),
-      ),
+      decoration: cardDecoration(scheme),
       child: Column(children: children),
     );
   }
@@ -365,7 +347,8 @@ class _Tile extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        padding: EdgeInsets.symmetric(
+            horizontal: Spacing.cardPadding, vertical: 12),
         child: Row(
           children: [
             Container(

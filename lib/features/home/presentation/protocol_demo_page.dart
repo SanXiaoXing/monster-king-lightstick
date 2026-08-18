@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:wanshou/src/rust/api/protocol.dart';
 
+import '../../../shared/theme/spacing.dart';
+import '../../../shared/widgets/app_top_bar.dart';
+
 /// 协议验证页：用 buildPacket(2, FlashMob("0004ff")) 重建 LIGHT_FLASH_HEX，
 /// 与 Rust 常量 lightFlashHex() 字节级对比，验证 Flutter→Rust→协议层端到端链路。
 class ProtocolDemoPage extends StatefulWidget {
@@ -46,15 +49,15 @@ class _ProtocolDemoPageState extends State<ProtocolDemoPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('宝宝剑协议验证')),
+      appBar: AppTopBar(title: '宝宝剑协议验证'),
       body: Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(Spacing.pageMargin),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(_result, textAlign: TextAlign.center),
-              const SizedBox(height: 24),
+              const SizedBox(height: Spacing.gap16),
               FilledButton(
                 onPressed: _loading ? null : _verifyLightFlash,
                 child: const Text('验证 LIGHT_FLASH_HEX'),

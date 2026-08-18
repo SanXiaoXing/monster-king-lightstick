@@ -6,16 +6,13 @@ import '../../../device/presentation/device_view_model.dart';
 import '../../../device/presentation/pages/device_page.dart';
 import '../../../lighting/presentation/pages/color_picker_page.dart';
 import '../../../settings/settings_page.dart';
+import '../widgets/glass_tab_bar.dart';
 
-/// 主页：胶囊式底部导航栏（基于 Material 3 [NavigationBar]）。
+/// 主页：Liquid Glass 悬浮胶囊底部导航（见 glass_tab_bar.dart）。
 ///
-/// 视觉参考截图：悬浮圆角胶囊、左右留边距、选中态有圆形高亮包图标，
-/// 图标填充 + 文字使用主题色，未选中为中性灰描线图标 + 灰文字。
-///
-/// 布局采用 `body` 内 `Column([Expanded(IndexedStack), 导航栏])` 而非
-/// [Scaffold.bottomNavigationBar] 槽——旧版 Scaffold 对自定义包裹的
-/// 底部栏高度预留异常，会把 [IndexedStack] 压成 0 高（整页只剩导航栏）。
-/// 这样 [IndexedStack] 始终撑满剩余区域，切换 Tab 不重建（状态保留）。
+/// `extendBody: true` 让 body 延伸到导航栏下方，BackdropFilter 才能模糊到
+/// 滚动内容，实现真正的毛玻璃悬浮观感（玻璃壳 + 选中态弹簧胶囊滑动）。
+/// 页面切换用淡入淡出 + 朝切换方向微移（对齐原型过渡）。
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -47,62 +44,42 @@ class _HomePageState extends State<HomePage> {
 
     return Scaffold(
       backgroundColor: scheme.surface,
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: IndexedStack(
-                index: _index,
-                children: [
-                  DevicePage(viewModel: _vm, embedded: true),
-                  ColorPickerPage(viewModel: _vm, embedded: true),
-                  MusicPage(viewModel: _vm, embedded: true),
-                  SettingsPage(viewModel: _vm, embedded: true),
-                ],
-              ),
-            ),
-            // 胶囊导航栏：左右留边距、宽屏居中（≤360）、悬浮观感。
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 360),
-                  child: NavigationBar(
-                    height: 64,
-                    elevation: 0,
-                    selectedIndex: _index,
-                    onDestinationSelected: _go,
-                    backgroundColor:
-                        scheme.surfaceContainerHighest.withValues(alpha: 0.92),
-                    indicatorColor: scheme.primary.withValues(alpha: 0.18),
-                    labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-                    destinations: const [
-                      NavigationDestination(
-                        icon: Icon(Icons.bluetooth_outlined),
-                        selectedIcon: Icon(Icons.bluetooth_rounded),
-                        label: '连接',
-                      ),
-                      NavigationDestination(
-                        icon: Icon(Icons.palette_outlined),
-                        selectedIcon: Icon(Icons.palette_rounded),
-                        label: '调色',
-                      ),
-                      NavigationDestination(
-                        icon: Icon(Icons.music_note_outlined),
-                        selectedIcon: Icon(Icons.music_note_rounded),
-                        label: '音乐',
-                      ),
-                      NavigationDestination(
-                        icon: Icon(Icons.settings_outlined),
-                        selectedIcon: Icon(Icons.settings_rounded),
-                        label: '设置',
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
+      // extendBody 让 body 内容延伸到 bottomNavigationBar 下方，
+      // 使 GlassTabBar 的 BackdropFilter 能模糊后方滚动内容。
+      extendBody: true,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          _buildPage(0, DevicePage(viewModel: _vm)),
+          _buildPage(1, ColorPickerPage(viewModel: _vm)),
+          _buildPage(2, MusicPage(viewModel: _vm)),
+          _buildPage(3, SettingsPage(viewModel: _vm)),
+        ],
+      ),
+      bottomNavigationBar: GlassTabBar(index: _index, onChanged: _go),
+    );
+  }
+
+  /// 带切换动画的页面：当前页淡入原位，其余页淡出并朝切换方向微移。
+  /// 所有页常驻树中（不销毁），各 Tab 页状态保留。
+  Widget _buildPage(int i, Widget page) {
+    final selected = i == _index;
+    final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    final offset = selected
+        ? Offset.zero
+        : Offset(_index < i ? 0.06 : -0.06, 0);
+    return IgnorePointer(
+      ignoring: !selected,
+      child: AnimatedOpacity(
+        opacity: selected ? 1 : 0,
+        // 减少动态：仅保留瞬时切换，不做位移动画。
+        duration: reduceMotion ? Duration.zero : const Duration(milliseconds: 320),
+        curve: Curves.easeOutCubic,
+        child: AnimatedSlide(
+          offset: reduceMotion ? Offset.zero : offset,
+          duration: reduceMotion ? Duration.zero : const Duration(milliseconds: 320),
+          curve: Curves.easeOutCubic,
+          child: page,
         ),
       ),
     );
