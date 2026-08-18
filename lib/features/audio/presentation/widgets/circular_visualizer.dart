@@ -4,14 +4,18 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
-import '../../../../app/theme/app_theme.dart';
 import '../../domain/audio_analysis.dart';
 
 /// Audio-reactive 圆形可视化：发光圆环 + 中心光球 + 强拍粒子爆发。
 ///
+/// 颜色与亮度由页面每帧算好后经 [displayColor] / [displayBrightness] 推入，
+/// 圆环如实镜像应援棒当前显示（随音=随音高流动的色相、单色=固定色、七彩=平滑周期色），
+/// 不再自行按模式推导色相。
+///
+/// 动画仍由以下音频特征驱动：
 /// - 低频 bass：圆环半径慢速大位移（低音越大、动作越大越慢）
 /// - 高频 treble：圆环细密快速振荡（高频越强、振荡越细越快）
-/// - 音量 volume：圆环厚度 / 亮度 / 中心光球尺寸
+/// - 音量 volume：中心光球尺寸
 /// - 强拍 isBeat：径向脉冲 + 粒子爆发
 ///
 /// Ticker 以 60fps 平滑（指数 attack/decay），音频帧（~86fps）只更新目标值，
@@ -22,13 +26,19 @@ class CircularVisualizer extends StatefulWidget {
     required this.frameNotifier,
     required this.active,
     required this.sensitivity,
-    required this.mode,
+    required this.displayColor,
+    required this.displayBrightness,
   });
 
   final ValueListenable<AudioFrame?> frameNotifier;
   final bool active;
   final double sensitivity;
-  final String mode;
+
+  /// 当前显示颜色（单色=所选色，七彩=步进色板中的当前色），由页面每帧推入。
+  final ValueListenable<Color> displayColor;
+
+  /// 当前显示亮度 0..1（单色随音量、七彩=亮灭包络×音量），由页面每帧推入。
+  final ValueListenable<double> displayBrightness;
 
   @override
   State<CircularVisualizer> createState() => _CircularVisualizerState();
@@ -45,11 +55,19 @@ class _CircularVisualizerState extends State<CircularVisualizer>
   void initState() {
     super.initState();
     widget.frameNotifier.addListener(_onFrame);
+    widget.displayColor.addListener(_onViz);
+    widget.displayBrightness.addListener(_onViz);
+    _state.setColor(widget.displayColor.value, widget.displayBrightness.value);
     _ticker = createTicker(_onTick)..start();
   }
 
   void _onFrame() {
     _state.update(widget.active ? widget.frameNotifier.value : null);
+  }
+
+  void _onViz() {
+    _state.setColor(widget.displayColor.value, widget.displayBrightness.value);
+    _repaint.value++;
   }
 
   void _onTick(Duration elapsed) {
@@ -64,6 +82,8 @@ class _CircularVisualizerState extends State<CircularVisualizer>
   @override
   void dispose() {
     widget.frameNotifier.removeListener(_onFrame);
+    widget.displayColor.removeListener(_onViz);
+    widget.displayBrightness.removeListener(_onViz);
     _ticker.dispose();
     _repaint.dispose();
     super.dispose();
@@ -92,9 +112,6 @@ class _CircularVisualizerState extends State<CircularVisualizer>
                 state: _state,
                 repaint: _repaint,
                 sensitivity: widget.sensitivity,
-                isDark: AppColors.isDark(scheme),
-                accent: scheme.primary,
-                mode: widget.mode,
               ),
             ),
           ),
@@ -104,11 +121,11 @@ class _CircularVisualizerState extends State<CircularVisualizer>
   }
 }
 
-/// 可视化共享状态：目标值（音频帧）+ 平滑当前值 + 粒子。
+/// 可视化共享状态：目标值（音频帧）+ 平滑当前值 + 粒子 + 当前显示色/亮度。
 class _VisualState {
   // 静音判定阈值：分析器已对底噪做绝对门限+软过渡（RMS < 0.008 输出
-  // 全零帧），这里再用音量迟滞兜底——低于下限冻结 time（hue 旋转/细振荡
-  // 立刻停），高于上限恢复推进，中间迟滞避免临界抖动。
+  // 全零帧），这里再用音量迟滞兜底——低于下限冻结 time（细振荡立刻停），
+  // 高于上限恢复推进，中间迟滞避免临界抖动。
   // 阈值取低：小音量音乐不会被误判静音而停掉律动。
   static const _silenceLow = 0.03;
   static const _silenceHigh = 0.07;
@@ -122,6 +139,10 @@ class _VisualState {
   double pulse = 0;
   double time = 0;
   final List<_Particle> _particles = [];
+
+  /// 当前显示色与亮度（页面每帧推入，_CircularPainter 据此上色）。
+  Color vizColor = Colors.blue;
+  double vizBright = 0;
 
   List<_Particle> get particles => _particles;
 
@@ -139,6 +160,11 @@ class _VisualState {
       if (a >= 0.005) return false;
     }
     return true;
+  }
+
+  void setColor(Color c, double bright) {
+    vizColor = c;
+    vizBright = bright.clamp(0.0, 1.0);
   }
 
   void update(AudioFrame? f) {
@@ -170,7 +196,7 @@ class _VisualState {
 
   void tick(double dt) {
     if (_hasSignal) {
-      // 仅在有真实音频信号时推进时间：hue 旋转 / 高频细振荡相位随音乐走
+      // 仅在有真实音频信号时推进时间：高频细振荡相位随音乐走
       time += dt;
     }
     // attack/decay：上升快、回落更快，声音一停柱子立刻落底。
@@ -241,17 +267,11 @@ class _CircularPainter extends CustomPainter {
     required this.state,
     required this.repaint,
     required this.sensitivity,
-    required this.isDark,
-    required this.accent,
-    required this.mode,
   }) : super(repaint: repaint);
 
   final _VisualState state;
   final Listenable repaint;
   final double sensitivity;
-  final bool isDark;
-  final Color accent;
-  final String mode;
 
   static const _points = 72;
 
@@ -262,28 +282,22 @@ class _CircularPainter extends CustomPainter {
   final Paint _tipPaint = Paint();
   final Paint _particlePaint = Paint();
 
-  /// 模式增益：强烈放大、柔和压缩。
-  double get _gain => switch (mode) {
-        '强烈' => 1.35,
-        '柔和' => 0.65,
-        _ => 1.0,
-      };
-
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     final R = size.shortestSide * 0.27; // 基准环半径
-    final gain = (0.6 + sensitivity * 0.8) * _gain;
+    final gain = 0.6 + sensitivity * 0.8;
     final vol = state.vol, treble = state.treble;
+    final color = state.vizColor;
+    final bright = state.vizBright;
 
-    // ---- 中心光球：半径/亮度随音量，强拍时径向膨胀 ----
+    // ---- 中心光球：半径随音量，强拍时径向膨胀；颜色=当前显示色 ----
     final orbR = R * (0.40 + vol * 0.52) * (1 + state.pulse * 0.25);
-    final orbColor = _ringColor(0, vol);
     final orbGlow = Paint()
       ..shader = RadialGradient(
         colors: [
-          orbColor.withValues(alpha: 0.55),
-          orbColor.withValues(alpha: 0.0),
+          color.withValues(alpha: 0.5 * bright + 0.04),
+          color.withValues(alpha: 0.0),
         ],
       ).createShader(Rect.fromCircle(center: center, radius: orbR * 2.2));
     canvas.drawCircle(center, orbR * 2.2, orbGlow);
@@ -293,18 +307,18 @@ class _CircularPainter extends CustomPainter {
       Paint()
         ..shader = RadialGradient(
           colors: [
-            Colors.white.withValues(alpha: 0.9),
-            orbColor,
-            orbColor.withValues(alpha: 0.25),
+            Colors.white.withValues(alpha: 0.85 + 0.1 * bright),
+            color,
+            color.withValues(alpha: 0.25),
           ],
           stops: const [0, 0.55, 1],
         ).createShader(Rect.fromCircle(center: center, radius: orbR)),
     );
 
     // ---- 柱状环：低频控整体半径（慢大），频带能量控柱长，高频细振荡 ----
-    _drawBars(canvas, center, R, gain, vol, treble);
+    _drawBars(canvas, center, R, gain, vol, treble, color, bright);
 
-    // ---- 强拍粒子：径向飞散的小光点（双层圆模拟柔光，免逐粒子 MaskFilter）----
+    // ---- 强拍粒子：径向飞散的小光点（颜色=当前显示色）----
     for (final p in state.particles) {
       final alpha = (p.life / 1.2).clamp(0.0, 1.0);
       final pos = Offset(
@@ -312,12 +326,11 @@ class _CircularPainter extends CustomPainter {
         center.dy + math.sin(p.angle) * p.radius * R,
       );
       final r = p.size * (0.6 + alpha * 0.6);
-      final color = _ringColor(0, alpha);
       _particlePaint
-        ..color = color.withValues(alpha: alpha * 0.25)
+        ..color = color.withValues(alpha: alpha * 0.25 * (0.4 + 0.6 * bright))
         ..maskFilter = null;
       canvas.drawCircle(pos, r * 2.2, _particlePaint);
-      _particlePaint.color = color.withValues(alpha: alpha * 0.85);
+      _particlePaint.color = color.withValues(alpha: alpha * 0.85 * (0.4 + 0.6 * bright));
       canvas.drawCircle(pos, r, _particlePaint);
     }
   }
@@ -329,10 +342,12 @@ class _CircularPainter extends CustomPainter {
   /// - 高频 treble：柱顶细密快速振荡
   /// - 音量 vol：柱宽 / 辉光强度 / 柱顶亮斑
   /// - 强拍 pulse：整环径向脉冲
+  /// - 颜色/亮度：来自页面推入的当前显示色与亮度（如实镜像应援棒）
   ///
   /// 辉光用两层递增宽度、递减透明度的描边模拟，替代逐柱 MaskFilter.blur
   /// （72 柱 ×2 次模糊是律动卡顿的主因之一，模糊滤镜每帧逐笔画光栅化）。
-  void _drawBars(Canvas canvas, Offset center, double R, double gain, double vol, double treble) {
+  void _drawBars(Canvas canvas, Offset center, double R, double gain, double vol, double treble,
+      Color color, double bright) {
     final barCount = _points;
     final beatBoost = 1 + state.pulse * 0.2;
     final baseR = R * (1 + state.bass * 0.42 * gain) * beatBoost;
@@ -350,47 +365,31 @@ class _CircularPainter extends CustomPainter {
       final rOut = baseR + barLen;
       final pIn = center + dir * rIn;
       final pOut = center + dir * rOut;
-      final color = _ringColor(i, vol * (0.4 + 0.6 * amp));
 
-      // 辉光外层（宽而淡）
+      // 辉光外层（宽而淡，随亮度起伏）
       _glowOuterPaint
         ..strokeWidth = barW * 3.0
-        ..color = color.withValues(alpha: 0.10 + 0.08 * vol);
+        ..color = color.withValues(alpha: 0.10 + 0.10 * bright);
       canvas.drawLine(pIn, pOut, _glowOuterPaint);
       // 辉光内层（略宽、稍亮）
       _glowInnerPaint
         ..strokeWidth = barW * 1.8
-        ..color = color.withValues(alpha: 0.18 + 0.14 * vol);
+        ..color = color.withValues(alpha: 0.18 + 0.16 * bright);
       canvas.drawLine(pIn, pOut, _glowInnerPaint);
-      // 主体柱（圆头）
+      // 主体柱（圆头，颜色即当前显示色）
       _barPaint
         ..strokeWidth = barW
         ..color = color;
       canvas.drawLine(pIn, pOut, _barPaint);
-      // 柱顶亮斑（能量越强越亮；双层圆模拟柔光）
+      // 柱顶亮斑（能量越强越亮；双层圆模拟柔光，整体随亮度起伏）
       final tipR = barW * (0.35 + 0.4 * amp);
-      _tipPaint.color = Colors.white.withValues(alpha: 0.08 + 0.2 * amp);
+      _tipPaint.color = Colors.white.withValues(alpha: (0.08 + 0.2 * amp) * (0.35 + 0.65 * bright));
       canvas.drawCircle(pOut, tipR * 1.9, _tipPaint);
-      _tipPaint.color = Colors.white.withValues(alpha: 0.25 + 0.6 * amp);
+      _tipPaint.color = Colors.white.withValues(alpha: (0.25 + 0.6 * amp) * (0.35 + 0.65 * bright));
       canvas.drawCircle(pOut, tipR, _tipPaint);
     }
   }
 
-  /// 环颜色：单色=accent（随音量调透明度，静音变暗）；
-  /// 七彩=随角度 + 时间旋转的 HSL（静音降亮度）。
-  Color _ringColor(int index, double volume) {
-    final v = volume.clamp(0.0, 1.0);
-    if (mode != '七彩律动') {
-      return accent.withValues(alpha: 0.5 + 0.5 * v);
-    }
-    final hue = (index * 5 + state.time * 36) % 360;
-    return HSLColor.fromAHSL(1, hue, 0.75, 0.18 + 0.5 * v).toColor();
-  }
-
   @override
-  bool shouldRepaint(covariant _CircularPainter old) =>
-      old.sensitivity != sensitivity ||
-      old.isDark != isDark ||
-      old.accent != accent ||
-      old.mode != mode;
+  bool shouldRepaint(covariant _CircularPainter old) => old.sensitivity != sensitivity;
 }
