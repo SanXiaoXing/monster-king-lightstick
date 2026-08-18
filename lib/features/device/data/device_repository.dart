@@ -20,6 +20,13 @@ class DeviceRepository {
   /// 灯光命令写特征（writeNoResponse，见 PROTOCOL.md / Kotlin 参考实现 FFE1）。
   static final _writeCharUuid = fbp.Guid('ffe1');
 
+  /// 写特征缓存（address → FFE1 特征）。
+  ///
+  /// discoverServices 是一次完整 GATT 往返（数十~上百毫秒），律动期间每次
+  /// 写入前都发现服务会让灯光响应严重滞后。连接后预热一次并缓存，写入
+  /// 直接命中；写失败/断开时剔除，下次写入自动重新发现。
+  final Map<String, fbp.BluetoothCharacteristic> _writeChars = {};
+
   /// 蓝牙适配器状态流（映射到领域枚举）。
   Stream<BluetoothAdapterState> get adapterState =>
       fbp.FlutterBluePlus.adapterState.map(_mapAdapterState);
@@ -56,7 +63,8 @@ class DeviceRepository {
 
   /// 连接指定设备。
   ///
-  /// 返回后连接建立（连接过程状态经 [connectionStateOf] 推送）。
+  /// 返回后连接建立（连接过程状态经 [connectionStateOf] 推送），并预热
+  /// 写特征缓存，首次写入无需再 discoverServices。
   Future<void> connect(Lightstick device) async {
     final d = fbp.BluetoothDevice.fromId(device.address);
     // 个人/教育用途按 nonprofit 许可；商业使用需 License.commercial
@@ -64,29 +72,52 @@ class DeviceRepository {
       license: fbp.License.nonprofit,
       timeout: const Duration(seconds: 15),
     );
+    try {
+      _writeChars[device.address] = await _discoverWriteChar(d);
+    } catch (_) {
+      // 预热失败不阻塞连接：首次写入时会重新发现并缓存
+      _writeChars.remove(device.address);
+    }
   }
 
   /// 断开指定设备。
   Future<void> disconnect(Lightstick device) async {
+    _writeChars.remove(device.address);
     await fbp.BluetoothDevice.fromId(device.address).disconnect();
   }
 
   /// 向设备写入原始命令字节（灯光/座位等，经 FFE1 writeNoResponse）。
   ///
-  /// 每次连接后需重新 discoverServices（flutter_blue_plus 约定）；失败抛异常
+  /// 命中缓存直接写入（单次 BLE 事务，毫秒级）；未命中（如系统侧已连接、
+  /// 缓存被剔除）先 discoverServices 再缓存。写失败剔除缓存并上抛，
   /// 由上层转成用户可读错误。
   Future<void> writeCommand(Lightstick device, List<int> bytes) async {
     final d = fbp.BluetoothDevice.fromId(device.address);
+    var characteristic = _writeChars[device.address];
+    characteristic ??= _writeChars[device.address] =
+        await _discoverWriteChar(d);
+    try {
+      await characteristic.write(bytes, withoutResponse: true);
+    } catch (_) {
+      // 特征可能在断连/重连后失效：剔除，下次写入重新发现
+      _writeChars.remove(device.address);
+      rethrow;
+    }
+  }
+
+  /// 发现 FFE0/FFE1 写特征（一次 GATT 往返，结果应缓存复用）。
+  Future<fbp.BluetoothCharacteristic> _discoverWriteChar(
+    fbp.BluetoothDevice d,
+  ) async {
     final services = await d.discoverServices();
     final service = services.firstWhere(
       (s) => s.uuid.str.toLowerCase() == _serviceUuid.str.toLowerCase(),
       orElse: () => throw StateError('设备未提供 FFE0 服务'),
     );
-    final characteristic = service.characteristics.firstWhere(
+    return service.characteristics.firstWhere(
       (c) => c.uuid.str.toLowerCase() == _writeCharUuid.str.toLowerCase(),
       orElse: () => throw StateError('设备未提供 FFE1 写特征'),
     );
-    await characteristic.write(bytes, withoutResponse: true);
   }
 
   /// 指定设备的连接状态流。

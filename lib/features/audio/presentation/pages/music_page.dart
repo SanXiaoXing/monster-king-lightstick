@@ -1,15 +1,23 @@
-import 'dart:math' as math;
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_theme.dart';
 import '../../../../shared/widgets/slider_row.dart';
+import '../../../device/data/device_repository.dart';
 import '../../../device/presentation/device_view_model.dart';
+import '../../../lighting/data/lighting_repository.dart';
+import '../../../lighting/domain/lighting_effect.dart';
+import '../../data/audio_repository.dart';
+import '../../domain/audio_analysis.dart';
+import '../widgets/circular_visualizer.dart';
 
 /// 音乐页（Dock「音乐」Tab）。
 ///
-/// 对齐原型音乐屏：镜像柱状频谱 + 波形线叠加 + 律动模式按钮 + 灵敏度滑杆。
-/// 真实音频分析由 Rust audio/ 落地后接入，当前以双正弦波+噪声模拟动态。
+/// 对齐原型音乐屏语义，可视化升级为 Audio-reactive 圆形可视化
+/// （发光圆环 + 中心光球 + 强拍粒子爆发，见 circular_visualizer.dart）。
+/// 频谱由麦克风采集（record 插件）→ 纯 Dart FFT 分析（AudioAnalyzer）驱动，
+/// 与监听音乐实时同步；未采集时显示静默状态。
 /// `embedded=true` 时无 AppBar，由 Dock 壳托管。
 class MusicPage extends StatefulWidget {
   const MusicPage({super.key, required this.viewModel, this.embedded = false});
@@ -21,26 +29,34 @@ class MusicPage extends StatefulWidget {
   State<MusicPage> createState() => _MusicPageState();
 }
 
-class _MusicPageState extends State<MusicPage>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _anim;
+class _MusicPageState extends State<MusicPage> {
+  final AudioRepository _audio = AudioRepository();
+  final LightingRepository _lighting = LightingRepository(DeviceRepository());
+  final ValueNotifier<AudioFrame?> _frameNotifier = ValueNotifier(null);
+  StreamSubscription<AudioFrame>? _sub;
+
   // 律动模式：单色 / 七彩 / 强烈 / 柔和
   String _mode = '单色律动';
   double _sensitivity = 0.6;
-  bool _active = true;
+  bool _active = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _anim = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1600),
-    )..repeat();
-  }
+  /// 荧光棒下发节流：分析帧 ~86fps（50% 重叠窗），BLE writeNoResponse
+  /// 实测可稳定承载 ~16Hz；取 60ms 在跟手性与无线可靠性间折中。
+  static const _stickInterval = Duration(milliseconds: 60);
+  DateTime? _lastStickSend;
+
+  /// 上一次下发尚未完成时丢帧不排队，避免慢 BLE 链路上命令积压、
+  /// 灯光响应越来越滞后于音乐。
+  bool _stickBusy = false;
+
+  /// 主导频带平滑位置（0..1，指数平滑防跳变；对应能量峰值所在频带）。
+  double _smoothPeak = 0;
 
   @override
   void dispose() {
-    _anim.dispose();
+    _sub?.cancel();
+    _audio.dispose();
+    _frameNotifier.dispose();
     super.dispose();
   }
 
@@ -60,6 +76,97 @@ class _MusicPageState extends State<MusicPage>
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(SnackBar(content: Text('已切换律动：$m')));
+    }
+  }
+
+  /// 音频帧 → 荧光棒灯效（节流 60ms + 在途丢帧；未连接/写失败静默，不刷屏）。
+  ///
+  /// 映射：主导频带（能量峰值所在频带）→ 色相，低音偏暖、高音偏冷，
+  /// 指数平滑防跳变；音量→亮度，强拍→亮度瞬间拉满（鼓点闪亮）。
+  void _syncStick(AudioFrame f) {
+    final device = widget.viewModel.activeDevice;
+    if (device == null || !widget.viewModel.status.isConnected) return;
+    if (_stickBusy) return; // 上一次写入未完成：丢帧防积压
+    final now = DateTime.now();
+    if (_lastStickSend != null &&
+        now.difference(_lastStickSend!) < _stickInterval) {
+      return;
+    }
+    _lastStickSend = now;
+
+    // 主导频带：能量峰值所在频带索引 → 归一化位置（0..1，低音→高音）
+    var peakIdx = 0;
+    var peakVal = -1.0;
+    for (var i = 0; i < f.bands.length; i++) {
+      if (f.bands[i] > peakVal) {
+        peakVal = f.bands[i];
+        peakIdx = i;
+      }
+    }
+    final peakNorm = f.bands.isEmpty ? 0.0 : peakIdx / (f.bands.length - 1);
+    // 指数平滑（节流 60ms 一帧，取 0.5 系数约 3 帧 ≈ 180ms 收敛，
+    // 防频带跳变闪烁的同时不明显拖慢色相跟随）
+    _smoothPeak = _smoothPeak * 0.5 + peakNorm * 0.5;
+
+    // 色相：低音(0)→红/橙，中音→绿，高音→蓝紫；映射到 0~300 避开红紫相接
+    final hue = _smoothPeak * 300;
+    final color = HSVColor.fromAHSV(
+      1,
+      hue,
+      0.85,
+      (0.45 + 0.55 * f.volume).clamp(0.0, 1.0),
+    ).toColor();
+    // 亮度死区：音量过低视为静音，荧光棒熄灭，避免底噪下微亮。
+    // 死区取低（0.04）：小音量音乐播放时灯棒保持跟随，不提前熄灭
+    final brightness = f.isBeat
+        ? 1.0
+        : f.volume < 0.04
+            ? 0.0
+            : ((f.volume - 0.04) / 0.96).clamp(0.0, 1.0);
+
+    // 静默失败：避免每次节拍弹错；完成后解除在途标记
+    _stickBusy = true;
+    unawaited(
+      _lighting
+          .sendEffect(device, fx: LightingFx.constantlyOn, color: color, brightness: brightness)
+          .catchError((_) {})
+          .whenComplete(() => _stickBusy = false),
+    );
+  }
+
+  /// 开始/暂停监听：开=申请权限并采集，关=停止采集恢复静默状态。
+  Future<void> _toggle() async {
+    if (_active) {
+      await _sub?.cancel();
+      _sub = null;
+      await _audio.stop();
+      _frameNotifier.value = null;
+      _lastStickSend = null;
+      if (!mounted) return;
+      setState(() => _active = false);
+      return;
+    }
+    try {
+      final stream = await _audio.start();
+      _sub = stream.listen(
+        (f) {
+          _frameNotifier.value = f;
+          _syncStick(f);
+        },
+        onError: (Object e) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(SnackBar(content: Text('音频采集异常：$e')));
+        },
+      );
+      if (!mounted) return;
+      setState(() => _active = true);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text('无法采集音乐：$e')));
     }
   }
 
@@ -85,8 +192,8 @@ class _MusicPageState extends State<MusicPage>
             sliver: SliverToBoxAdapter(
               child: Column(
                 children: [
-                  _Spectrum(
-                    anim: _anim,
+                  CircularVisualizer(
+                    frameNotifier: _frameNotifier,
                     active: _active,
                     sensitivity: _sensitivity,
                     mode: _mode,
@@ -103,7 +210,7 @@ class _MusicPageState extends State<MusicPage>
                   const SizedBox(height: 16),
                   _ToggleBtn(
                     active: _active,
-                    onTap: () => setState(() => _active = !_active),
+                    onTap: _toggle,
                   ),
                 ],
               ),
@@ -114,13 +221,9 @@ class _MusicPageState extends State<MusicPage>
     );
 
     if (widget.embedded) {
-      return SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: 110),
-          child: content,
-        ),
-      );
+      // 导航栏已是 Scaffold.bottomNavigationBar，框架自动在导航栏之上布局，
+      // 不再需要为悬浮 Dock 手动留白。
+      return SafeArea(bottom: false, child: content);
     }
     return Scaffold(appBar: AppBar(title: const Text('音乐律动')), body: content);
   }
@@ -152,7 +255,7 @@ class _Heading extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 6),
-          Text('频谱实时跟随环境音乐，驱动应援棒亮度与色彩。',
+          Text('音频实时驱动发光圆环：低频推动环体、高频细密振荡、强拍脉冲爆发。',
               style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13, height: 1.55)),
         ],
       ),
@@ -191,186 +294,6 @@ class _StatusDot extends StatelessWidget {
       ),
     );
   }
-}
-
-/// 镜像柱状频谱 + 波形线。
-class _Spectrum extends StatelessWidget {
-  const _Spectrum({
-    required this.anim,
-    required this.active,
-    required this.sensitivity,
-    required this.mode,
-  });
-
-  final Animation<double> anim;
-  final bool active;
-  final double sensitivity;
-  final String mode;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return LayoutBuilder(
-      builder: (context, c) {
-        final w = c.maxWidth;
-        final h = w * 0.78; // 频谱区域高
-        return AnimatedBuilder(
-          animation: anim,
-          builder: (context, _) {
-            return Container(
-              width: w,
-              height: h,
-              decoration: BoxDecoration(
-                color: scheme.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(22),
-                border: Border.all(color: scheme.outlineVariant),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(22),
-                child: CustomPaint(
-                  size: Size(w, h),
-                  painter: _SpectrumPainter(
-                    t: active ? anim.value : 0.0,
-                    sensitivity: sensitivity,
-                    isDark: AppColors.isDark(scheme),
-                    accent: scheme.primary,
-                    mode: mode,
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-}
-
-class _SpectrumPainter extends CustomPainter {
-  _SpectrumPainter({
-    required this.t,
-    required this.sensitivity,
-    required this.isDark,
-    required this.accent,
-    required this.mode,
-  });
-
-  final double t;
-  final double sensitivity;
-  final bool isDark;
-  final Color accent;
-  final String mode;
-
-  // ponytail: 纯模拟数据，真实音频由 Rust audio/ 落地后替换 _barHeight
-  static const _barCount = 28;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final cy = size.height / 2;
-    final barW = size.width / _barCount;
-    final gap = barW * 0.32;
-    final w = barW - gap;
-
-    // 镜像柱：上下对称
-    for (var i = 0; i < _barCount; i++) {
-      final v = _barHeight(i, t);
-      final barH = v * (size.height * 0.46) * (0.4 + sensitivity);
-      final x = i * barW + gap / 2;
-
-      // 颜色：单色=accent；七彩=HSL 随 i 昶移
-      final color = mode == '七彩律动'
-          ? HSLColor.fromAHSL(1, (i / _barCount) * 360, 0.7, 0.6).toColor()
-          : accent;
-
-      // 上柱
-      final topRect = RRect.fromRectAndRadius(
-        Rect.fromLTWH(x, cy - barH, w, barH),
-        const Radius.circular(3),
-      );
-      canvas.drawRRect(
-        topRect,
-        Paint()
-          ..color = color
-          ..shader = LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [color, color.withValues(alpha: 0.4)],
-          ).createShader(topRect.outerRect),
-      );
-      // 下柱（镜像，透明度低）
-      final botRect = RRect.fromRectAndRadius(
-        Rect.fromLTWH(x, cy, w, barH * 0.7),
-        const Radius.circular(3),
-      );
-      canvas.drawRRect(
-        botRect,
-        Paint()
-          ..color = color.withValues(alpha: 0.45)
-          ..shader = LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [color.withValues(alpha: 0.45), color.withValues(alpha: 0.1)],
-          ).createShader(botRect.outerRect),
-      );
-    }
-
-    // 中线
-    final linePaint = Paint()
-      ..color = (isDark ? Colors.white : Colors.black).withValues(alpha: 0.06)
-      ..strokeWidth = 1;
-    canvas.drawLine(
-      Offset(0, cy),
-      Offset(size.width, cy),
-      linePaint,
-    );
-
-    // 波形线：叠加在频谱上方
-    final wavePath = Path();
-    final wavePaint = Paint()
-      ..color = accent.withValues(alpha: 0.85)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2
-      ..strokeJoin = StrokeJoin.round
-      ..strokeCap = StrokeCap.round;
-
-    for (var i = 0; i <= _barCount * 2; i++) {
-      final x = (i / (_barCount * 2)) * size.width;
-      final baseWave = math.sin((i * 0.4) + t * 2 * math.pi) * 0.18;
-      final noise = _noise(i, t) * 0.06;
-      final y = cy + (baseWave + noise) * size.height * (0.5 + sensitivity);
-      if (i == 0) {
-        wavePath.moveTo(x, y);
-      } else {
-        wavePath.lineTo(x, y);
-      }
-    }
-    canvas.drawPath(wavePath, wavePaint);
-  }
-
-  /// 模拟频谱柱高（0-1）：双正弦 + 噪声，中央频段更活跃。
-  double _barHeight(int i, double t) {
-    final norm = i / _barCount;
-    // 中央峰值（音乐低/中频更活跃）
-    final env = math.sin(norm * math.pi);
-    final w1 = math.sin((i * 0.55) + t * 2 * math.pi);
-    final w2 = math.sin((i * 0.31) - t * 2 * math.pi * 0.7) * 0.7;
-    final n = _noise(i, t);
-    final v = (env * (0.5 + 0.5 * (w1 + w2 + n).abs())).clamp(0.04, 1.0);
-    return v;
-  }
-
-  double _noise(int i, double t) {
-    // ponytail: 伪随机基于 i+t，确定性，够用；真实音频落地后替换
-    final s = (i * 13.7 + t * 47.3) % 1;
-    return (s - 0.5) * 2;
-  }
-
-  @override
-  bool shouldRepaint(covariant _SpectrumPainter old) =>
-      old.t != t ||
-      old.sensitivity != sensitivity ||
-      old.mode != mode ||
-      old.isDark != isDark;
 }
 
 class _ModeRow extends StatelessWidget {

@@ -66,13 +66,9 @@ class _DevicePageState extends State<DevicePage> {
     );
 
     if (widget.embedded) {
-      return SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: 110), // Dock 高度 + 间距
-          child: body,
-        ),
-      );
+      // 导航栏已是 Scaffold.bottomNavigationBar，框架自动在导航栏之上布局，
+      // 不再需要为悬浮 Dock 手动留白。
+      return SafeArea(bottom: false, child: body);
     }
     return Scaffold(appBar: AppBar(title: const Text('连接设备')), body: body);
   }

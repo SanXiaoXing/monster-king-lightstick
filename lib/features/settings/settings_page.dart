@@ -272,13 +272,9 @@ class _SettingsPageState extends State<SettingsPage> {
     );
 
     if (widget.embedded) {
-      return SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: 110),
-          child: content,
-        ),
-      );
+      // 导航栏已是 Scaffold.bottomNavigationBar，框架自动在导航栏之上布局，
+      // 不再需要为悬浮 Dock 手动留白。
+      return SafeArea(bottom: false, child: content);
     }
     return Scaffold(appBar: AppBar(title: const Text('设置')), body: content);
   }

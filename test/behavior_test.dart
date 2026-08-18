@@ -120,38 +120,47 @@ void main() {
     expect(find.text('✓ 灯光效果已应用：呼吸灯 速度 50%'), findsOneWidget);
   });
 
-  testWidgets('调色盘：默认 #FF38D3，预设精确命中，色环取色数学正确', (tester) async {
+  testWidgets('调色盘：默认 #0A84FF，色环取色数学正确，hex 输入回填', (tester) async {
     final vm = await _vm(connected: true);
     addTearDown(vm.dispose);
     await tester.pumpWidget(_wrap(ColorPickerPage(viewModel: vm)));
     await tester.pump();
 
-    // 默认荧光粉
-    expect(find.text('#FF38D3'), findsOneWidget);
+    // 默认 iOS 蓝（hex 输入框内容与 hint 同名，直接断言 controller）
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      '0A84FF',
+    );
 
-    // 预设星蓝 → 精确 #48B9FF
-    await tester.ensureVisible(find.text('星蓝'));
-    await tester.pump();
-    await tester.tap(find.text('星蓝'));
-    await tester.pump();
-    expect(find.text('#48B9FF'), findsOneWidget);
-
-    // 色环取色：点击正下方（相对圆心角度 90°）
-    // HSV(90°, S=1, V=1) = RGB(128,255,0) = #80FF00
+    // 色环取色：起点在正下方边缘内侧（避免边界外不命中），拖到边缘
+    // 相对圆心角度 90°、S=1 → HSV(90°,1,1) = RGB(128,255,0) = #80FF00
     final wheelRect = tester.getRect(find.byType(AspectRatio));
-    final target =
-        wheelRect.center + Offset(0, wheelRect.height * 0.25);
-    final g = await tester.startGesture(target);
-    await g.moveBy(const Offset(0, 1));
+    final g = await tester.startGesture(
+        wheelRect.center + Offset(0, wheelRect.height / 2 - 2));
+    await g.moveBy(const Offset(0, 2));
     await g.up();
     await tester.pump();
-    expect(find.text('#80FF00'), findsOneWidget);
+    expect(find.text('80FF00'), findsOneWidget);
 
-    // 亮度滑杆左拉 → hex 变暗，不再是满饱和色
+    // 点击圆心 → 白（S=0）
+    final g2 = await tester.startGesture(wheelRect.center);
+    await g2.up();
+    await tester.pump();
+    expect(find.text('FFFFFF'), findsOneWidget);
+
+    // hex 输入回填：直接键入十六进制 → 状态与色块同步
+    await tester.enterText(find.byType(TextField), '00FF00');
+    await tester.pump();
+    expect(find.text('00FF00'), findsOneWidget);
+
+    // 亮度滑杆默认 80%，左拉后不再是满值
+    expect(find.text('80%'), findsOneWidget);
     await tester.drag(find.byType(Slider), const Offset(-120, 0));
     await tester.pump();
-    expect(find.text('100%'), findsNothing); // 亮度标签不再 100%
-    expect(find.text('#80FF00'), findsNothing);
+    expect(find.text('80%'), findsNothing);
+
+    // 卸载页面 → dispose 取消防抖定时器，避免遗留 Timer
+    await tester.pumpWidget(const SizedBox());
   });
 
   testWidgets('连接守卫：未连接时应用颜色 → 提示并跳转连接页', (tester) async {

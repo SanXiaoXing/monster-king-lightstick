@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
@@ -11,7 +12,7 @@ import '../../domain/lighting_effect.dart';
 
 /// 调色页（Dock「调色」Tab）。
 ///
-/// 对齐原型调色屏：方形 SV 板 + 色相条 + hex 输入 + 亮度滑杆 + 9 灯效 3×3。
+/// 对齐原型调色屏：圆形 RGB 色环 + hex 输入 + 亮度滑杆 + 9 灯效 3×3。
 /// `embedded=true` 时无 AppBar，由 Dock 壳托管。
 class ColorPickerPage extends StatefulWidget {
   const ColorPickerPage({super.key, required this.viewModel, this.embedded = false});
@@ -32,6 +33,9 @@ class _ColorPickerPageState extends State<ColorPickerPage> {
   LightingFx _fx = LightingFx.constantlyOn;
   final _hexCtrl = TextEditingController(text: '0A84FF');
   Timer? _colorDebounce;
+  DateTime? _lastColorSent;
+  bool _colorSending = false;
+  static const _liveInterval = Duration(milliseconds: 70);
 
   @override
   void dispose() {
@@ -73,19 +77,46 @@ class _ColorPickerPageState extends State<ColorPickerPage> {
     return true;
   }
 
-  /// 颜色/亮度变化防抖 250ms 后实时下发（拖拽过程不逐帧写 BLE）。
+  /// 颜色/亮度变化实时下发：
+  /// - 拖拽/滑动过程中按 [_liveInterval] 节流下发（约 14fps），灯棒跟随变化；
+  /// - 若两次变化间隔不足，安排一次尾部发送，保证松手后停在最终色；
+  /// - 上次写入未完成时跳过，避免 BLE 命令堆积。
   void _scheduleColorSend() {
     _colorDebounce?.cancel();
-    _colorDebounce = Timer(const Duration(milliseconds: 250), () {
-      if (!mounted) return;
-      _send(_fx);
-    });
+    final now = DateTime.now();
+    final since = _lastColorSent == null
+        ? _liveInterval
+        : now.difference(_lastColorSent!);
+    if (since >= _liveInterval) {
+      _lastColorSent = now;
+      _dispatchColor();
+    } else {
+      _colorDebounce = Timer(_liveInterval - since, () {
+        if (!mounted) return;
+        _colorDebounce = null;
+        _lastColorSent = DateTime.now();
+        _dispatchColor();
+      });
+    }
+  }
+
+  /// 实际下发（带在途保护），拖动期间的实时下发静默失败、不刷错误提示。
+  Future<void> _dispatchColor() async {
+    if (_colorSending) return;
+    _colorSending = true;
+    try {
+      await _send(_fx, silentErrors: true);
+    } finally {
+      _colorSending = false;
+    }
   }
 
   /// 下发当前颜色 + 指定效果到已连接设备。
   ///
-  /// [announce] 为 true 时（用户点选效果）提示应用结果，静默失败仍提示。
-  Future<void> _send(LightingFx fx, {bool announce = false}) async {
+  /// [announce] 为 true 时（用户点选效果）提示应用结果；
+  /// [silentErrors] 为 true 时（拖动实时下发）静默吞掉失败，不弹错误。
+  Future<void> _send(LightingFx fx,
+      {bool announce = false, bool silentErrors = false}) async {
     final device = widget.viewModel.activeDevice;
     if (device == null || !_ensureConnected()) return;
     try {
@@ -101,7 +132,7 @@ class _ColorPickerPageState extends State<ColorPickerPage> {
           ..showSnackBar(SnackBar(content: Text('已应用：${fx.label} $_hex')));
       }
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || silentErrors) return;
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(SnackBar(content: Text('下发失败：$e')));
@@ -130,24 +161,16 @@ class _ColorPickerPageState extends State<ColorPickerPage> {
             sliver: SliverToBoxAdapter(
               child: Column(
                 children: [
-                  _SvPanel(
+                  _ColorWheel(
                     hue: _hue,
                     sat: _sat,
-                    val: _val,
-                    onChanged: (s, v) {
+                    color: _color,
+                    onChanged: (h, s) {
                       setState(() {
+                        _hue = h;
                         _sat = s;
-                        _val = v;
+                        _val = 1; // 色环仅编码色相+饱和度，明度恒为满值
                       });
-                      _syncHex();
-                      _scheduleColorSend();
-                    },
-                  ),
-                  const SizedBox(height: 14),
-                  _HueStrip(
-                    hue: _hue,
-                    onChanged: (h) {
-                      setState(() => _hue = h);
                       _syncHex();
                       _scheduleColorSend();
                     },
@@ -175,6 +198,7 @@ class _ColorPickerPageState extends State<ColorPickerPage> {
                     selected: _fx,
                     onPick: (fx) {
                       setState(() => _fx = fx);
+                      _lastColorSent = null; // 重置节流，下次拖拽立即下发
                       _send(fx, announce: true);
                     },
                   ),
@@ -187,13 +211,9 @@ class _ColorPickerPageState extends State<ColorPickerPage> {
     );
 
     if (widget.embedded) {
-      return SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: 110),
-          child: content,
-        ),
-      );
+      // 导航栏已是 Scaffold.bottomNavigationBar，框架自动在导航栏之上布局，
+      // 不再需要为悬浮 Dock 手动留白。
+      return SafeArea(bottom: false, child: content);
     }
     return Scaffold(appBar: AppBar(title: const Text('调色盘')), body: content);
   }
@@ -216,7 +236,7 @@ class _Heading extends StatelessWidget {
                   letterSpacing: -0.4,
                   height: 1.1)),
           const SizedBox(height: 6),
-          Text('方形面板选色或直接输入十六进制，选灯效即时应用。',
+          Text('圆形色环选色或直接输入十六进制，选灯效即时应用。',
               style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13, height: 1.55)),
         ],
       ),
@@ -224,185 +244,128 @@ class _Heading extends StatelessWidget {
   }
 }
 
-/// 方形 SV 板：X=饱和度，Y=明度（上明下暗）。
-class _SvPanel extends StatelessWidget {
-  const _SvPanel({required this.hue, required this.sat, required this.val, required this.onChanged});
+/// 圆形 RGB 取色器：
+/// 整盘 SweepGradient 色相谱（R→Y→G→C→B→M→R）叠白心径向饱和度：
+/// - 角度 = 色相（0°=右=红，顺时针）
+/// - 半径 = 饱和度（圆心白 / S=0，边缘纯色 / S=1）
+/// 单手柄在 (hue angle, sat×radius) 处显示当前 RGB 混色结果。
+class _ColorWheel extends StatelessWidget {
+  const _ColorWheel({
+    required this.hue,
+    required this.sat,
+    required this.color,
+    required this.onChanged,
+  });
 
-  final double hue, sat, val;
-  final void Function(double sat, double val) onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final hueColor = HSVColor.fromAHSV(1, hue, 1, 1).toColor();
-    return LayoutBuilder(
-      builder: (context, c) {
-        final w = c.maxWidth;
-        final h = w / 1.4; // aspect 1.4:1
-        return SizedBox(
-          width: w,
-          height: h,
-          child: Stack(
-            children: [
-              // 底层：白 → 色相（水平）
-              Positioned.fill(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                        colors: [Colors.white, hueColor],
-                      ),
-                      border: Border.all(color: scheme.outlineVariant),
-                    ),
-                  ),
-                ),
-              ),
-              // 上层：透明 → 黑（垂直，下黑）
-              Positioned.fill(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [Colors.transparent, Colors.black],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              // 游标
-              Positioned(
-                left: sat * w - 11,
-                top: (1 - val) * h - 11,
-                child: Container(
-                  width: 22,
-                  height: 22,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: HSVColor.fromAHSV(1, hue, sat, val).toColor(),
-                    border: Border.all(color: Colors.white, width: 3),
-                    boxShadow: [
-                      BoxShadow(color: Colors.black.withValues(alpha: 0.35), blurRadius: 8),
-                    ],
-                  ),
-                ),
-              ),
-              // 拾取手势
-              Positioned.fill(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onPanDown: (d) => _pick(d.localPosition, w, h),
-                  onPanUpdate: (d) => _pick(d.localPosition, w, h),
-                  child: const SizedBox.expand(),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _pick(Offset local, double w, double h) {
-    final s = (local.dx / w).clamp(0.0, 1.0);
-    final v = (1 - local.dy / h).clamp(0.0, 1.0);
-    onChanged(s, v);
-  }
-}
-
-/// 色相条：水平彩虹，X=色相 0-360。
-class _HueStrip extends StatelessWidget {
-  const _HueStrip({required this.hue, required this.onChanged});
-  final double hue;
-  final void Function(double hue) onChanged;
+  final double hue, sat;
+  final Color color;
+  final void Function(double hue, double sat) onChanged;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return LayoutBuilder(
-      builder: (context, c) {
-        final w = c.maxWidth;
-        const h = 28.0;
-        return SizedBox(
-          width: w,
-          height: h,
-          child: Stack(
-            children: [
-              Positioned.fill(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(100),
-                  child: CustomPaint(
-                    size: Size(w, h),
-                    painter: _RainbowPainter(),
-                  ),
-                ),
-              ),
-              Positioned(
-                left: (hue / 360) * w - 5,
-                top: -3,
-                bottom: -3,
-                child: Container(
-                  width: 10,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(100),
-                    border: Border.all(color: Colors.white, width: 2),
-                    boxShadow: [
-                      BoxShadow(color: Colors.black.withValues(alpha: 0.35), blurRadius: 6),
-                    ],
-                  ),
-                ),
-              ),
-              Positioned.fill(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onPanDown: (d) => _pick(d.localPosition.dx, w),
-                  onPanUpdate: (d) => _pick(d.localPosition.dx, w),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(100),
-                      border: Border.all(color: scheme.outlineVariant),
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 340),
+        child: AspectRatio(
+          aspectRatio: 1,
+          child: LayoutBuilder(
+            builder: (context, c) {
+              final size = c.maxWidth;
+              final center = Offset(size / 2, size / 2);
+              final radius = size / 2;
+              final angle = hue * math.pi / 180;
+              final pos =
+                  center + Offset(math.cos(angle), math.sin(angle)) * (sat * radius);
+              return Stack(
+                alignment: Alignment.center,
+                children: [
+                  ClipOval(
+                    child: CustomPaint(
+                      size: Size.square(size),
+                      painter: const _WheelPainter(),
                     ),
                   ),
-                ),
-              ),
-            ],
+                  // 拾取手柄（当前 RGB 混色结果）
+                  Positioned(
+                    left: pos.dx - 12,
+                    top: pos.dy - 12,
+                    child: IgnorePointer(
+                      child: Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: color,
+                          border: Border.all(color: Colors.white, width: 3),
+                          boxShadow: [
+                            BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.35),
+                                blurRadius: 8),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  // 拾取手势
+                  Positioned.fill(
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onPanDown: (d) => _pick(d.localPosition, center, radius),
+                      onPanUpdate: (d) => _pick(d.localPosition, center, radius),
+                      child: const SizedBox.expand(),
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
-  void _pick(double dx, double w) =>
-      onChanged((dx / w).clamp(0.0, 1.0) * 360);
+  void _pick(Offset local, Offset center, double radius) {
+    final dx = local.dx - center.dx;
+    final dy = local.dy - center.dy;
+    final dist = math.sqrt(dx * dx + dy * dy);
+    final sat = (dist / radius).clamp(0.0, 1.0);
+    var angle = math.atan2(dy, dx) * 180 / math.pi; // 0°=右（红），顺时针
+    if (angle < 0) angle += 360;
+    onChanged(angle, sat);
+  }
 }
 
-class _RainbowPainter extends CustomPainter {
+class _WheelPainter extends CustomPainter {
+  const _WheelPainter();
+
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
-    const stops = [0.0, 0.17, 0.33, 0.5, 0.67, 0.83, 1.0];
-    final colors = [
-      const Color(0xFFFF0000), const Color(0xFFFFFF00),
-      const Color(0xFF00FF00), const Color(0xFF00FFFF),
-      const Color(0xFF0000FF), const Color(0xFFFF00FF),
-      const Color(0xFFFF0000),
+    final center = rect.center;
+    final radius = size.shortestSide / 2;
+
+    // 色相环：0°=红，顺时针黄(60°)/绿(120°)/青(180°)/蓝(240°)/品红(300°)，
+    // 与 _pick 的角度换算一致，保证所见即所得。
+    const stops = [0.0, 1 / 6, 2 / 6, 3 / 6, 4 / 6, 5 / 6, 1.0];
+    const colors = [
+      Color(0xFFFF0000), Color(0xFFFFFF00), Color(0xFF00FF00),
+      Color(0xFF00FFFF), Color(0xFF0000FF), Color(0xFFFF00FF),
+      Color(0xFFFF0000),
     ];
-    final paint = Paint()
-      ..shader = LinearGradient(colors: colors, stops: stops).createShader(rect);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(rect, Radius.circular(size.height / 2)),
-      paint,
-    );
+    final huePaint = Paint()
+      ..shader = SweepGradient(colors: colors, stops: stops).createShader(rect);
+    canvas.drawCircle(center, radius, huePaint);
+
+    // 饱和度：圆心白 → 边缘透明（圆心即白 S=0）
+    final satPaint = Paint()
+      ..shader = RadialGradient(
+        colors: [Colors.white, Colors.white.withValues(alpha: 0)],
+      ).createShader(rect);
+    canvas.drawCircle(center, radius, satPaint);
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter old) => false;
+  bool shouldRepaint(covariant _WheelPainter old) => false;
 }
 
 class _HexRow extends StatelessWidget {
@@ -417,12 +380,13 @@ class _HexRow extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Row(
       children: [
+        // 圆形颜色预览（与圆形取色器统一）
         Container(
-          width: 38,
-          height: 38,
+          width: 40,
+          height: 40,
           decoration: BoxDecoration(
             color: color,
-            borderRadius: BorderRadius.circular(12),
+            shape: BoxShape.circle,
             border: Border.all(color: scheme.outlineVariant),
           ),
         ),

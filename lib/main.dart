@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart' as fbp;
 
 import 'app/app.dart';
 import 'app/theme/app_theme.dart';
@@ -12,6 +13,8 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await RustBridge.init();
   await LocalStorage.ensureInit();
+  // 静默 flutter_blue_plus 原生端日志（Android 的 [FBP-Android]/[FBP] 刷屏）
+  await fbp.FlutterBluePlus.setLogLevel(fbp.LogLevel.none);
   await initThemeMode();
   runApp(const App());
 }
