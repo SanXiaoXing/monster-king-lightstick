@@ -7,6 +7,11 @@
 .vscode/
 .atom/
 .atomcode/
+
+# AI agent 本地配置/记忆（不上传 GitHub）
+.freebuff/
+.workbuddy/
+
 .build/
 .buildlog/
 .history
