@@ -205,7 +205,7 @@ class _DeviceCard extends StatelessWidget {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                _shortAddr(device.address),
+                                device.address,
                                 style: TextStyle(
                                   color: scheme.onSurfaceVariant,
                                   fontSize: 11,
@@ -242,8 +242,6 @@ class _DeviceCard extends StatelessWidget {
     );
   }
 
-  String _shortAddr(String a) =>
-      a.length > 12 ? '${a.substring(0, 6)}…${a.substring(a.length - 4)}' : a;
 }
 
 /// 断开按钮：仅已连接设备显示。
