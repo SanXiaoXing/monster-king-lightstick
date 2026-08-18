@@ -1,8 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_theme.dart';
 import '../../../../shared/widgets/slider_row.dart';
+import '../../../device/data/device_repository.dart';
 import '../../../device/presentation/device_view_model.dart';
+import '../../data/lighting_repository.dart';
+import '../../domain/lighting_effect.dart';
 
 /// 调色页（Dock「调色」Tab）。
 ///
@@ -19,14 +24,18 @@ class ColorPickerPage extends StatefulWidget {
 }
 
 class _ColorPickerPageState extends State<ColorPickerPage> {
+  late final LightingRepository _repo = LightingRepository(DeviceRepository());
+
   // HSV 状态：默认 #0A84FF（iOS 蓝）
   double _hue = 210, _sat = 1, _val = 1;
   double _brightness = 0.8;
-  String _fx = '常亮';
+  LightingFx _fx = LightingFx.constantlyOn;
   final _hexCtrl = TextEditingController(text: '0A84FF');
+  Timer? _colorDebounce;
 
   @override
   void dispose() {
+    _colorDebounce?.cancel();
     _hexCtrl.dispose();
     super.dispose();
   }
@@ -50,6 +59,7 @@ class _ColorPickerPageState extends State<ColorPickerPage> {
         _sat = hsv.saturation;
         _val = hsv.value;
       });
+      _scheduleColorSend();
     }
   }
 
@@ -61,6 +71,41 @@ class _ColorPickerPageState extends State<ColorPickerPage> {
       return false;
     }
     return true;
+  }
+
+  /// 颜色/亮度变化防抖 250ms 后实时下发（拖拽过程不逐帧写 BLE）。
+  void _scheduleColorSend() {
+    _colorDebounce?.cancel();
+    _colorDebounce = Timer(const Duration(milliseconds: 250), () {
+      if (!mounted) return;
+      _send(_fx);
+    });
+  }
+
+  /// 下发当前颜色 + 指定效果到已连接设备。
+  ///
+  /// [announce] 为 true 时（用户点选效果）提示应用结果，静默失败仍提示。
+  Future<void> _send(LightingFx fx, {bool announce = false}) async {
+    final device = widget.viewModel.activeDevice;
+    if (device == null || !_ensureConnected()) return;
+    try {
+      await _repo.sendEffect(
+        device,
+        fx: fx,
+        color: _color,
+        brightness: _brightness,
+      );
+      if (announce && mounted) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text('已应用：${fx.label} $_hex')));
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text('下发失败：$e')));
+    }
   }
 
   @override
@@ -95,6 +140,7 @@ class _ColorPickerPageState extends State<ColorPickerPage> {
                         _val = v;
                       });
                       _syncHex();
+                      _scheduleColorSend();
                     },
                   ),
                   const SizedBox(height: 14),
@@ -103,6 +149,7 @@ class _ColorPickerPageState extends State<ColorPickerPage> {
                     onChanged: (h) {
                       setState(() => _hue = h);
                       _syncHex();
+                      _scheduleColorSend();
                     },
                   ),
                   const SizedBox(height: 14),
@@ -116,19 +163,19 @@ class _ColorPickerPageState extends State<ColorPickerPage> {
                     label: '亮度',
                     valueLabel: '${(_brightness * 100).round()}%',
                     value: _brightness,
-                    onChanged: (v) => setState(() => _brightness = v),
+                    onChanged: (v) {
+                      setState(() => _brightness = v);
+                      _scheduleColorSend();
+                    },
                   ),
                   const SizedBox(height: 6),
                   _SectionLabel('灯光效果（9 种）'),
                   const SizedBox(height: 8),
                   _EffectGrid(
                     selected: _fx,
-                    onPick: (name) {
-                      setState(() => _fx = name);
-                      if (_ensureConnected()) {
-                        ScaffoldMessenger.of(context)..hideCurrentSnackBar()
-                          ..showSnackBar(SnackBar(content: Text('已应用：$name $_hex')));
-                      }
+                    onPick: (fx) {
+                      setState(() => _fx = fx);
+                      _send(fx, announce: true);
                     },
                   ),
                 ],
@@ -425,19 +472,19 @@ class _SectionLabel extends StatelessWidget {
 
 class _EffectGrid extends StatelessWidget {
   const _EffectGrid({required this.selected, required this.onPick});
-  final String selected;
-  final void Function(String name) onPick;
+  final LightingFx selected;
+  final void Function(LightingFx fx) onPick;
 
-  static const _effects = <(String, IconData)>[
-    ('常亮', Icons.lightbulb_rounded),
-    ('呼吸', Icons.waves_rounded),
-    ('快闪', Icons.bolt_rounded),
-    ('眨眼', Icons.visibility_rounded),
-    ('聚会', Icons.celebration_rounded),
-    ('彩虹', Icons.gradient_rounded),
-    ('星空', Icons.star_rounded),
-    ('随机色', Icons.shuffle_rounded),
-    ('黑屏', Icons.nightlight_rounded),
+  static const _effects = <(LightingFx, IconData)>[
+    (LightingFx.constantlyOn, Icons.lightbulb_rounded),
+    (LightingFx.breathe, Icons.waves_rounded),
+    (LightingFx.flashMob, Icons.bolt_rounded),
+    (LightingFx.blink, Icons.visibility_rounded),
+    (LightingFx.party, Icons.celebration_rounded),
+    (LightingFx.rainbow, Icons.gradient_rounded),
+    (LightingFx.starrySky, Icons.star_rounded),
+    (LightingFx.random, Icons.shuffle_rounded),
+    (LightingFx.blackScreen, Icons.nightlight_rounded),
   ];
 
   @override
@@ -451,12 +498,12 @@ class _EffectGrid extends StatelessWidget {
       crossAxisSpacing: 8,
       childAspectRatio: 0.92,
       children: [
-        for (final (name, icon) in _effects)
+        for (final (fx, icon) in _effects)
           _EffectBtn(
             icon: icon,
-            label: name,
-            active: selected == name,
-            onTap: () => onPick(name),
+            label: fx.label,
+            active: selected == fx,
+            onTap: () => onPick(fx),
             accent: scheme.primary,
             surface: scheme.surfaceContainerLow,
             outline: scheme.outlineVariant,

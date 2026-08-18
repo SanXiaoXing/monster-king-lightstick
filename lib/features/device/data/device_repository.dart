@@ -17,6 +17,9 @@ class DeviceRepository {
   /// 宝宝剑 BLE 主服务 UUID（见 docs/protocol/PROTOCOL.md，Kotlin 参考实现 FFE0）。
   static final _serviceUuid = fbp.Guid('ffe0');
 
+  /// 灯光命令写特征（writeNoResponse，见 PROTOCOL.md / Kotlin 参考实现 FFE1）。
+  static final _writeCharUuid = fbp.Guid('ffe1');
+
   /// 蓝牙适配器状态流（映射到领域枚举）。
   Stream<BluetoothAdapterState> get adapterState =>
       fbp.FlutterBluePlus.adapterState.map(_mapAdapterState);
@@ -66,6 +69,24 @@ class DeviceRepository {
   /// 断开指定设备。
   Future<void> disconnect(Lightstick device) async {
     await fbp.BluetoothDevice.fromId(device.address).disconnect();
+  }
+
+  /// 向设备写入原始命令字节（灯光/座位等，经 FFE1 writeNoResponse）。
+  ///
+  /// 每次连接后需重新 discoverServices（flutter_blue_plus 约定）；失败抛异常
+  /// 由上层转成用户可读错误。
+  Future<void> writeCommand(Lightstick device, List<int> bytes) async {
+    final d = fbp.BluetoothDevice.fromId(device.address);
+    final services = await d.discoverServices();
+    final service = services.firstWhere(
+      (s) => s.uuid.str.toLowerCase() == _serviceUuid.str.toLowerCase(),
+      orElse: () => throw StateError('设备未提供 FFE0 服务'),
+    );
+    final characteristic = service.characteristics.firstWhere(
+      (c) => c.uuid.str.toLowerCase() == _writeCharUuid.str.toLowerCase(),
+      orElse: () => throw StateError('设备未提供 FFE1 写特征'),
+    );
+    await characteristic.write(bytes, withoutResponse: true);
   }
 
   /// 指定设备的连接状态流。
