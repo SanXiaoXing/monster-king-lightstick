@@ -31,18 +31,23 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # The following adds the Cupertino Icons font to your application.
-  # Use with the CupertinoIcons class for iOS style icons.
-  cupertino_icons: ^1.0.8
   rust_lib_wanshou:
     path: rust_builder
   flutter_rust_bridge: 2.12.0
   # BLE 通信（Repository 层 Native 实现，见 AGENT.md "换掉 Rust BLE 为 Native/Mock 时 UI 不动"）
   flutter_blue_plus: ^2.3.12
+  # 本地持久化（core/storage/local_storage.dart 门面，主题模式等）
+  shared_preferences: ^2.5.3
+  # frb 生成带数据枚举（WanError 等）的 Dart 类所需
+  freezed_annotation: ^2.4.4
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+
+  # frb codegen 依赖（MissingDep: freezed）；build_runner 生成 .freezed.dart
+  freezed: ^2.5.0
+  build_runner: ^2.4.15
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is

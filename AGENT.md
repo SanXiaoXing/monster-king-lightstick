@@ -91,26 +91,28 @@ rust/src/bluetooth/   rust/src/protocol/   # 通信 / 封包
 ```
 lib/
 ├── app/
-│   ├── app.dart                      # 根 Widget [已实现]（首页 = DevicePage 设备连接页）
-│   ├── router/app_router.dart        # 路由表 [骨架]
-│   └── theme/app_theme.dart          # 全局主题 [已实现]
+│   ├── app.dart                      # 根 Widget [已实现]（首页 = HomePage，双主题 + 跟随系统）
+│   ├── router/app_router.dart        # 集中路由 [已实现]（AppRouter.page 推页，不手写 MaterialPageRoute）
+│   └── theme/app_theme.dart          # 全局主题 [已实现]（浅色/深色 ColorScheme + themeModeNotifier 跟随系统）
 ├── core/
 │   ├── bridge/rust_bridge.dart       # Rust 运行时门面 [已实现]
 │   ├── config/app_config.dart        # 应用常量 [已实现]
 │   ├── error/app_exception.dart      # 统一异常 [骨架]
-│   └── storage/local_storage.dart    # 持久化 [骨架]
+│   └── storage/local_storage.dart    # 持久化 [已实现]（shared_preferences；主题模式已接入）
 ├── features/
-│   ├── home/presentation/protocol_demo_page.dart   # 协议验证页 [已实现]
+│   ├── home/presentation/pages/home_page.dart   # 主页 [已实现]（原型 home 屏：状态栏/连接胶囊/Logo/六宫格菜单）
+│   ├── home/presentation/protocol_demo_page.dart # 协议验证页 [已实现]（设置页入口）
 │   ├── device/                       # data/domain/presentation [已实现：flutter_blue_plus 于 Repository 层]
-│   ├── lighting/                     # domain/presentation [骨架]
-│   ├── audio/                        # domain/presentation [骨架]
-│   ├── settings/settings_page.dart   # [骨架]
-│   └── about/about_page.dart         # [骨架]
+│   ├── lighting/                     # domain [骨架]；presentation：调色盘/座位绑定/灯光效果 [已实现]
+│   ├── audio/                        # domain [骨架]；presentation：音乐调光 [已实现]
+│   ├── settings/settings_page.dart   # [已实现]（主题切换/灯光效果入口/协议验证/清除设备）
+│   └── about/                        # tips_page 温馨提示 [已实现]；about_page [骨架]
 ├── shared/
 │   ├── widgets/app_button.dart       # [骨架]
+│   ├── widgets/slider_row.dart       # 带标签滑杆行（亮度/灵敏度/速度共用）[已实现]
 │   └── components/color_picker.dart  # [骨架]
 ├── src/rust/                         # frb 生成，禁改
-└── main.dart                         # RustBridge.init + runApp [已实现]
+└── main.dart                         # RustBridge.init + 存储/主题初始化 + runApp [已实现]
 ```
 
 ### rust/src（FRB 桥接 crate）
@@ -119,14 +121,14 @@ lib/
 src/
 ├── api/
 │   ├── protocol.rs                   # 协议构造 25 函数 [已实现]
-│   ├── simple.rs                     # 模板演示 [已实现]
+│   ├── simple.rs                     # frb 初始化钩子（init_app）[已实现]
 │   ├── bluetooth.rs / lightstick.rs / audio.rs   # 能力入口 [骨架]
 │   └── mod.rs
 ├── bluetooth/                        # scanner/connection/characteristic [骨架]
 ├── protocol/                         # 门面：mod+packet+command [透传]，decoder/encoder [骨架]
 ├── lightstick/                       # device/controller/effect [骨架]
 ├── audio/                            # analyzer/spectrum [骨架]
-├── error.rs                          # WanError 统一错误 [已实现，未启用]
+├── error.rs                          # WanError 统一错误 [已实现]（AES API 已 Result 上报）
 ├── frb_generated.rs                  # 生成，禁改
 └── lib.rs
 ```

@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>万兽之王 · Logo 骑跨边框按钮原型</title>
+<!--
+  设计原型：左侧 Logo "骑跨"在按钮左边框上的按钮体系
+  图标来源：assets/icon/logo_black.svg / logo_white.svg（像素波形 Logo，360×672）
+  构造要点：SVG 负偏移向左突出、垂直居中并上下溢出按钮，z-index 盖住边框；
+           2px 金属细边框闭环包住整颗按钮，强调色光晕让 Logo 与边框/背景融合。
+  填充色由 CSS 变量 --logo-fill 随主题切换，深色 / 浅色自适应。
+-->
+<style>
+/* ================= 主题变量（与 lib/app/theme/app_theme.dart 色板一致） ================= */
+:root[data-theme="dark"]{
+  --bg:#020b18; --panel:#071a31; --panel2:#0b223a;
+  --line:#c9e5ff; --text:#f4f8ff; --muted:#9fb1c7;
+  --accent:#ff38d3; --blue:#69c8ff; --gold:#d8b66a; --on-accent:#2b0420;
+  --logo-fill:#eaf5ff;                      /* 深色主题：Logo 像素亮色 */
+  --btn-border:rgba(255,255,255,.6);        /* 金属细边框：半透明白 */
+  --btn-hover-border:#ffffff;
+  --btn-fill-1:rgba(22,32,52,.78); --btn-fill-2:rgba(10,15,30,.9);
+  --btn-inset:rgba(255,255,255,.08);
+  --ico-glow:rgba(255,56,211,.50);          /* Logo 光晕：品牌强调色 */
+  --text-shadow:0 2px 4px rgba(0,0,0,.65);
+  --card-bg:linear-gradient(145deg,#06162acc,#0a1e33d8);
+  --card-border:rgba(199,228,255,.35);
+  --shadow:rgba(0,0,0,.35);
+  --bg-glow-1:rgba(105,200,255,.10); --bg-glow-2:rgba(255,56,211,.07);
+}
+:root[data-theme="light"]{
+  --bg:#f4f8ff; --panel:#ffffff; --panel2:#e4edf9;
+  --line:#12395e; --text:#0b1c30; --muted:#5c6d82;
+  --accent:#c2189b; --blue:#1a86d8; --gold:#b07a2e; --on-accent:#ffffff;
+  --logo-fill:#0d3b66;                      /* 浅色主题：Logo 像素深蓝 */
+  --btn-border:rgba(18,57,94,.55);          /* 金属细边框：深蓝 */
+  --btn-hover-border:#12395e;
+  --btn-fill-1:rgba(255,255,255,.85); --btn-fill-2:rgba(228,237,249,.92);
+  --btn-inset:rgba(18,57,94,.06);
+  --ico-glow:rgba(194,24,155,.35);
+  --text-shadow:0 1px 0 rgba(255,255,255,.8);
+  --card-bg:linear-gradient(145deg,#ffffff,#eef4fc);
+  --card-border:rgba(18,57,94,.18);
+  --shadow:rgba(29,60,94,.18);
+  --bg-glow-1:rgba(26,134,216,.10); --bg-glow-2:rgba(194,24,155,.06);
+}
+
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  min-height:100vh;
+  color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","PingFang SC","Microsoft YaHei",sans-serif;
+  background:
+    radial-gradient(900px 520px at 88% -10%, var(--bg-glow-1), transparent 62%),
+    radial-gradient(720px 440px at -12% 28%, var(--bg-glow-2), transparent 60%),
+    var(--bg);
+  transition:background .3s,color .3s;
+}
+.wrap{max-width:980px;margin:0 auto;padding:0 22px 60px}
+
+/* ================= 顶栏 ================= */
+header{
+  position:sticky;top:0;z-index:20;
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding:12px 22px;margin-bottom:26px;
+  border-bottom:1px solid var(--card-border);
+  background:color-mix(in srgb,var(--bg) 84%,transparent);
+  backdrop-filter:blur(12px);
+}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.brand-mark{
+  width:20px;height:37px;flex:none;display:block;
+  filter:drop-shadow(0 0 6px var(--ico-glow));
+}
+.brand b{font-size:15px;letter-spacing:2px;white-space:nowrap}
+.brand small{display:block;color:var(--muted);font-size:11px;letter-spacing:1px;margin-top:2px}
+
+/* 主题切换分段控件 */
+.seg{display:flex;flex:none;border:1px solid var(--card-border);border-radius:99px;overflow:hidden;background:var(--panel)}
+.seg button{
+  border:0;background:transparent;color:var(--muted);
+  padding:8px 16px;font-size:13px;cursor:pointer;letter-spacing:1px;
+  display:flex;align-items:center;gap:6px;transition:.2s;
+}
+.seg button:hover{color:var(--text)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent);font-weight:600}
+.seg .ico{font-size:14px;line-height:1}
+
+/* ================= 通用 ================= */
+h1{font-size:26px;letter-spacing:3px;margin:8px 0 6px}
+.hero-desc{color:var(--muted);font-size:14px;line-height:1.8;margin:0 0 8px}
+.hero-desc code{background:var(--panel);border:1px solid var(--card-border);border-radius:6px;padding:1px 6px;font-size:12px;color:var(--blue)}
+
+.card{
+  background:var(--card-bg);
+  border:1px solid var(--card-border);
+  border-radius:22px;
+  padding:24px 22px;
+  margin-bottom:22px;
+  box-shadow:inset 0 0 30px rgba(139,212,255,.05),0 12px 35px var(--shadow);
+  transition:background .3s,border-color .3s;
+}
+.sec-title{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:700;letter-spacing:2px;margin:0 0 4px}
+.sec-title::before{content:"";width:4px;height:18px;border-radius:2px;background:linear-gradient(180deg,var(--accent),var(--blue));box-shadow:0 0 10px var(--ico-glow)}
+.sec-desc{color:var(--muted);font-size:13px;line-height:1.7;margin:0 0 20px}
+
+/* ================= 按钮：Logo 骑跨左边框 + 金属细边框 ================= */
+.btn{
+  --ico-w:47px; --ico-h:88px; --ico-out:18px;   /* Logo 图标尺寸与向左突出量 */
+  --btn-h:60px; --btn-r:8px; --btn-fs:17px;
+  --pad-l:77px; --pad-r:34px;                    /* 左内边距 = 突出 + 图标宽 + 文字间距 */
+  position:relative;
+  display:inline-flex;align-items:center;justify-content:center;
+  height:var(--btn-h);
+  padding:0 var(--pad-r) 0 var(--pad-l);
+  /* 整体金属细边框：2px 半透明描边闭环包住整颗按钮 */
+  border:2px solid var(--btn-border);
+  border-radius:var(--btn-r);
+  /* 半透明暗色渐变底 + 轻微背景模糊 */
+  background:linear-gradient(90deg,var(--btn-fill-1),var(--btn-fill-2));
+  backdrop-filter:blur(6px);
+  color:var(--text);
+  font-size:var(--btn-fs);font-weight:600;letter-spacing:4px;
+  white-space:nowrap;cursor:pointer;user-select:none;
+  box-shadow:inset 0 0 10px var(--btn-inset),0 0 15px var(--shadow);
+  transition:border-color .2s,box-shadow .2s,transform .18s;
+}
+.btn:hover{
+  border-color:var(--btn-hover-border);
+  transform:translateY(-2px);
+  box-shadow:inset 0 0 15px var(--btn-inset),0 0 20px var(--ico-glow);
+}
+.btn:active{transform:scale(.98)}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+
+/* Logo 图案：负偏移向左突出，垂直居中并上下溢出按钮，z-index 盖住边框 → 骑跨效果 */
+.btn-logo{
+  position:absolute;
+  left:calc(-1 * var(--ico-out));   /* 关键：负值向左突出，压在边框上 */
+  top:50%;transform:translateY(-50%);
+  width:var(--ico-w);height:var(--ico-h);
+  z-index:2;                          /* 层级高于按钮主体，盖住边框 */
+  fill:var(--logo-fill);opacity:.95;
+  shape-rendering:crispEdges;
+  pointer-events:none;                /* 不阻挡按钮 hover / 点击 */
+  /* 强调色光晕 + 白边微光，与边框/背景融合 */
+  filter:drop-shadow(0 0 6px var(--ico-glow)) drop-shadow(0 0 2px rgba(255,255,255,.55));
+}
+.btn-label{position:relative;z-index:1;text-shadow:var(--text-shadow);pointer-events:none}
+
+/* ================= 尺寸规格 ================= */
+.btn-lg{--ico-w:47px;--ico-h:88px;--ico-out:18px;--btn-h:60px;--btn-r:8px;--btn-fs:17px;--pad-l:77px;--pad-r:34px}
+.btn-md{--ico-w:37px;--ico-h:70px;--ico-out:14px;--btn-h:48px;--btn-r:7px;--btn-fs:15px;--pad-l:61px;--pad-r:28px;letter-spacing:3px}
+.btn-sm{--ico-w:28px;--ico-h:52px;--ico-out:11px;--btn-h:36px;--btn-r:6px;--btn-fs:13px;--pad-l:47px;--pad-r:22px;letter-spacing:2px}
+
+/* ================= 宽度适配 ================= */
+.w-full{width:100%}
+.w-fixed{width:min(340px,100%)}
+.w-fixed.md{width:min(240px,100%)}
+.w-fixed.sm{width:min(150px,100%)}
+.w-auto{width:auto}
+
+/* 图标上下溢出按钮，行间距需容纳：溢出量×2 + 余量 */
+.btn-pair{display:flex;gap:26px;flex-wrap:wrap;margin-top:24px}
+.size-block.lg .btn-pair{margin-top:32px;gap:36px}
+.size-block.md .btn-pair{margin-top:26px;gap:30px}
+.size-block.sm .btn-pair{margin-top:22px;gap:26px}
+
+/* ================= 尺寸演示块 ================= */
+.size-block{margin-bottom:28px}
+.size-block:last-child{margin-bottom:0}
+.size-head{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.size-tag{
+  flex:none;min-width:66px;text-align:center;
+  background:var(--panel);border:1px solid var(--card-border);border-radius:10px;
+  padding:5px 10px;font-size:12px;font-weight:700;color:var(--blue);letter-spacing:1px;
+}
+.size-head .dim{color:var(--muted);font-size:12px;letter-spacing:1px}
+
+/* ================= 主题色变体 ================= */
+.variant-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:32px 30px}
+.btn.blue{--ico-glow:rgba(105,200,255,.55)}
+.btn.gold{--ico-glow:rgba(216,182,106,.50)}
+.btn.ghost{--btn-fill-1:transparent;--btn-fill-2:transparent;backdrop-filter:none;box-shadow:none}
+
+/* ================= 边框骑跨解析 ================= */
+.analysis{display:grid;grid-template-columns:1.25fr 1fr;gap:22px;align-items:center}
+.hero-stage{position:relative;padding:28px 0}
+.btn-hero{--ico-w:64px;--ico-h:120px;--ico-out:24px;--btn-h:84px;--btn-r:10px;--btn-fs:20px;--pad-l:102px;--pad-r:40px;width:100%}
+.badge{
+  position:absolute;width:22px;height:22px;border-radius:50%;
+  background:var(--accent);color:var(--on-accent);
+  font-size:12px;font-weight:800;display:grid;place-items:center;
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--bg) 70%,transparent),0 0 12px var(--ico-glow);
+  z-index:3;pointer-events:none;
+}
+.badge.b1{top:-8px;left:50%;transform:translateX(-50%)}
+.badge.b2{left:2px;top:50%;transform:translateY(-50%)}
+.badge.b3{right:8px;top:50%;transform:translateY(-50%)}
+.legend{display:grid;gap:14px}
+.legend-item{display:flex;gap:12px;align-items:flex-start}
+.legend-item .num{
+  flex:none;width:22px;height:22px;border-radius:50%;margin-top:1px;
+  background:var(--accent);color:var(--on-accent);font-size:12px;font-weight:800;
+  display:grid;place-items:center;
+}
+.legend-item b{display:block;font-size:13px;letter-spacing:1px;margin-bottom:2px}
+.legend-item p{margin:0;color:var(--muted);font-size:12px;line-height:1.7}
+.legend-item code{color:var(--blue);font-size:11px}
+
+/* ================= 图标资源 ================= */
+.assets{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.swatch{
+  display:flex;flex-direction:column;align-items:center;gap:10px;
+  padding:20px;border-radius:16px;border:1px solid var(--card-border);
+}
+.swatch.dark{background:#020b18;box-shadow:inset 0 0 30px rgba(105,200,255,.08)}
+.swatch.light{background:#f4f8ff;box-shadow:inset 0 0 30px rgba(26,134,216,.08)}
+.swatch svg{width:70px;height:130px;shape-rendering:crispEdges;filter:drop-shadow(0 4px 12px rgba(0,0,0,.25))}
+.swatch figcaption{font-size:12px;color:var(--muted);text-align:center;line-height:1.6}
+.swatch figcaption b{color:var(--text);display:block;letter-spacing:1px}
+.asset-note{margin:16px 0 0;color:var(--muted);font-size:12.5px;line-height:1.8}
+.asset-note code{color:var(--blue);font-size:11.5px}
+
+/* ================= 规格表 ================= */
+.spec-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+.spec-table th,.spec-table td{border:1px solid var(--card-border);padding:9px 10px;text-align:center}
+.spec-table th{background:color-mix(in srgb,var(--panel2) 65%,transparent);color:var(--muted);font-weight:600;letter-spacing:1px}
+.spec-table td:first-child{font-weight:700}
+.spec-table tr td{color:var(--text)}
+
+/* ================= 页脚 / Toast ================= */
+footer{text-align:center;color:var(--muted);font-size:12px;letter-spacing:1px;margin-top:8px;line-height:1.8}
+.toast{
+  position:fixed;left:50%;bottom:30px;z-index:50;
+  transform:translateX(-50%) translateY(16px);opacity:0;
+  background:var(--panel2);border:1px solid var(--card-border);border-radius:12px;
+  padding:11px 20px;font-size:13px;letter-spacing:1px;color:var(--text);
+  box-shadow:0 12px 34px var(--shadow);pointer-events:none;
+  transition:.25s;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@media (max-width:720px){
+  .analysis{grid-template-columns:1fr}
+  h1{font-size:21px}
+  .brand small{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<!-- 图标资源库：assets/icon/logo_black.svg 与 logo_white.svg 的矩形像素数据，封装为可复用符号。
+     填充色交给 CSS 变量 --logo-fill，随主题自动切换（深色亮像素 / 浅色深像素）。 -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+  <symbol id="logo-glyph" viewBox="0 0 360 672">
+    <style>.px{fill:var(--logo-fill,currentColor)}</style>
+    <g class="px" shape-rendering="crispEdges">
+      <rect x="144" y="48"  width="24" height="216"/>
+      <rect x="168" y="72"  width="24" height="72"/>
+      <rect x="120" y="120" width="24" height="120"/>
+      <rect x="168" y="192" width="24" height="120"/>
+      <rect x="192" y="264" width="24" height="96"/>
+      <rect x="120" y="288" width="24" height="72"/>
+      <rect x="216" y="288" width="24" height="168"/>
+      <rect x="96"  y="336" width="24" height="120"/>
+      <rect x="240" y="336" width="24" height="96"/>
+      <rect x="72"  y="360" width="24" height="48"/>
+      <rect x="120" y="408" width="24" height="72"/>
+      <rect x="192" y="408" width="24" height="72"/>
+      <rect x="48"  y="432" width="24" height="120"/>
+      <rect x="144" y="432" width="48" height="48"/>
+      <rect x="288" y="432" width="24" height="120"/>
+      <rect x="72"  y="480" width="24" height="96"/>
+      <rect x="264" y="480" width="24" height="96"/>
+      <rect x="96"  y="504" width="48" height="72"/>
+      <rect x="216" y="504" width="48" height="96"/>
+      <rect x="24"  y="528" width="24" height="24"/>
+      <rect x="312" y="528" width="24" height="24"/>
+      <rect x="144" y="552" width="24" height="72"/>
+      <rect x="192" y="552" width="24" height="72"/>
+      <rect x="120" y="576" width="24" height="24"/>
+      <rect x="168" y="576" width="24" height="72"/>
+    </g>
+  </symbol>
+</svg>
+
+<header>
+  <div class="brand">
+    <svg class="brand-mark" viewBox="0 0 360 672" aria-hidden="true"><use href="#logo-glyph"/></svg>
+    <div>
+      <b>万兽之王 · 按钮体系原型</b>
+      <small>Logo 骑跨左边框 + 金属细边框</small>
+    </div>
+  </div>
+  <div class="seg" role="group" aria-label="主题切换">
+    <button type="button" data-theme="dark"  aria-pressed="true"  onclick="setTheme('dark')">深色</button>
+    <button type="button" data-theme="light" aria-pressed="false" onclick="setTheme('light')">浅色</button>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <h1>Logo 骑跨边框按钮</h1>
+  <p class="hero-desc">
+    取 <code>assets/icon/logo_black.svg / logo_white.svg</code> 的像素波形 Logo，像徽章一样负偏移向左突出、垂直居中并上下溢出按钮，
+    用 <code>z-index</code> 盖住左边框，形成「骑跨」在边框上的装饰；2px 金属细边框闭环包住整颗按钮，
+    强调色光晕让 Logo 与边框、背景彼此融合。填充色由 CSS 变量随 <b>深色 / 浅色</b> 主题切换，
+    按钮支持大 / 中 / 小三档尺寸与多种宽度。
+  </p>
+
+  <!-- ============ 尺寸与宽度适配 ============ -->
+  <section class="card">
+    <h2 class="sec-title">尺寸与宽度适配</h2>
+    <p class="sec-desc">每档尺寸演示三种宽度：全宽（width:100%）、固定宽、随内容自适应。点击任意按钮可预览。</p>
+
+    <div class="size-block lg">
+      <div class="size-head"><span class="size-tag">大号 L</span><span class="dim">高 60px · 图标 47×88 · 突出 18px · 圆角 8px</span></div>
+      <button class="btn btn-lg w-full" type="button"><svg class="btn-logo" viewBox="0 0 360 672" aria-hidden="true"><use href="#logo-glyph"/></svg><span class="btn-label">连接设备 · 全宽</span></button>
+      <div class="btn-pair">
+        <button class="btn btn-lg w-fixed" type="button"><svg class="btn-logo" viewBox="0 0 360 672" aria-hidden="true"><use href="#logo-glyph"/></svg><span class="btn-label">固定宽度 340px</span></button>
+        <button class="btn btn-lg w-auto" type="button"><svg class="btn-logo" viewBox="0 0 360 672" aria-hidden="true"><use href="#logo-glyph"/></svg><span class="btn-label">自适应内容</span></button>
+      </div>
+    </div>
+
+    <div class="size-block md">
+      <div class="size-head"><span class="size-tag">中号 M</span><span class="dim">高 48px · 图标 37×70 · 突出 14px · 圆角 7px</span></div>
+      <button class="btn btn-md w-full" type="button"><svg class="btn-logo" viewBox="0 0 360 672" aria-hidden="true"><use href="#logo-glyph"/></svg><span class="btn-label">应用灯光 · 全宽</span></button>
+      <div class="btn-pair">
+        <button class="btn btn-md w-fixed md" type="button"><svg class="btn-logo" viewBox="0 0 360 672" aria-hidden="true"><use href="#logo-glyph"/></svg><span class="btn-label">固定宽度 240px</span></button>
+        <button class="btn btn-md w-auto" type="button"><svg class="btn-logo" viewBox="0 0 360 672" aria-hidden="true"><use href="#logo-glyph"/></svg><span class="btn-label">自适应内容</span></button>
+      </div>
+    </div>
+
+    <div class="size-block sm">
+      <div class="size-head"><span class="size-tag">小号 S</span><span class="dim">高 36px · 图标 28×52 · 突出 11px · 圆角 6px</span></div>
+      <button class="btn btn-sm w-full" type="button"><svg class="btn-logo" viewBox="0 0 360 672" aria-hidden="true"><use href="#logo-glyph"/></svg><span class="btn-label">绑定座位 · 全宽</span></button>
+      <div class="btn-pair">
+        <button class="btn btn-sm w-fixed sm" type="button"><svg class="btn-logo" viewBox="0 0 360 672" aria-hidden="true"><use href="#logo-glyph"/></svg><span class="btn-label">固定宽度 150px</span></button>
+        <button class="btn btn-sm w-auto" type="button"><svg class="btn-logo" viewBox="0 0 360 672" aria-hidden="true"><use href="#logo-glyph"/></svg><span class="btn-label">自适应内容</span></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 主题色变体 ============ -->
+  <section class="card">
+    <h2 class="sec-title">主题色变体</h2>
+    <p class="sec-desc">Logo 光晕与金属边框可切换品牌三色系；幽灵按钮为透明面板 + 同款描边，保留骑跨装饰。</p>
+    <div class="variant-grid">
+      <button class="btn btn-lg w-full" type="button"><svg class="btn-logo" viewBox="0 0 360 672" aria-hidden="true"><use href="#logo-glyph"/></svg><span class="btn-label">荧光粉 · 连接设备</span></button>
+      <button class="btn btn-lg w-full blue" type="button"><svg class="btn-logo" viewBox="0 0 360 672" aria-hidden="true"><use href="#logo-glyph"/></svg><span class="btn-label">星蓝 · 音乐调光</span></button>
+      <button class="btn btn-lg w-full gold" type="button"><svg class="btn-logo" viewBox="0 0 360 672" aria-hidden="true"><use href="#logo-glyph"/></svg><span class="btn-label">鎏金 · 座位绑定</span></button>
+      <button class="btn btn-lg w-full ghost" type="button"><svg class="btn-logo" viewBox="0 0 360 672" aria-hidden="true"><use href="#logo-glyph"/></svg><span class="btn-label">幽灵 · 重新扫描</span></button>
+    </div>
+  </section>
+
+  <!-- ============ 骑跨解析 ============ -->
+  <section class="card">
+    <h2 class="sec-title">骑跨边框解析</h2>
+    <p class="sec-desc">Logo 与金属细边框的构成拆解。</p>
+    <div class="analysis">
+      <div class="hero-stage">
+        <button class="btn btn-hero" type="button"><svg class="btn-logo" viewBox="0 0 360 672" aria-hidden="true"><use href="#logo-glyph"/></svg><span class="btn-label">万兽之王 · 光剑控制台</span></button>
+        <span class="badge b1">①</span>
+        <span class="badge b2">②</span>
+        <span class="badge b3">③</span>
+      </div>
+      <div class="legend">
+        <div class="legend-item">
+          <span class="num">①</span>
+          <div><b>整体金属细边框</b><p>2px 半透明描边 + 内发光，闭环包住整颗按钮；深色主题取半透明白，浅色主题取深蓝。</p></div>
+        </div>
+        <div class="legend-item">
+          <span class="num">②</span>
+          <div><b>Logo 骑跨在边框上</b><p><code>left: -Npx</code> 负偏移向左突出、垂直居中并上下溢出按钮，<code>z-index: 2</code> 盖住边框。</p></div>
+        </div>
+        <div class="legend-item">
+          <span class="num">③</span>
+          <div><b>光晕融合</b><p><code>drop-shadow</code> 强调色光晕 + 白边微光，让 Logo 与边框、背景彼此渗透，文字左内边距避让。</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 图标资源 ============ -->
+  <section class="card">
+    <h2 class="sec-title">图标资源（assets/icon/）</h2>
+    <p class="sec-desc">原型直接内联源图标矩形像素数据，上图即原文件；按钮内复用同一图案，仅填充色改为主题变量。</p>
+    <div class="assets">
+      <figure class="swatch dark">
+        <svg viewBox="0 0 360 672" aria-hidden="true">
+          <g fill="#FFFFFF" shape-rendering="crispEdges">
+            <rect x="144" y="48" width="24" height="216"/><rect x="168" y="72" width="24" height="72"/>
+            <rect x="120" y="120" width="24" height="120"/><rect x="168" y="192" width="24" height="120"/>
+            <rect x="192" y="264" width="24" height="96"/><rect x="120" y="288" width="24" height="72"/>
+            <rect x="216" y="288" width="24" height="168"/><rect x="96" y="336" width="24" height="120"/>
+            <rect x="240" y="336" width="24" height="96"/><rect x="72" y="360" width="24" height="48"/>
+            <rect x="120" y="408" width="24" height="72"/><rect x="192" y="408" width="24" height="72"/>
+            <rect x="48" y="432" width="24" height="120"/><rect x="144" y="432" width="48" height="48"/>
+            <rect x="288" y="432" width="24" height="120"/><rect x="72" y="480" width="24" height="96"/>
+            <rect x="264" y="480" width="24" height="96"/><rect x="96" y="504" width="48" height="72"/>
+            <rect x="216" y="504" width="48" height="96"/><rect x="24" y="528" width="24" height="24"/>
+            <rect x="312" y="528" width="24" height="24"/><rect x="144" y="552" width="24" height="72"/>
+            <rect x="192" y="552" width="24" height="72"/><rect x="120" y="576" width="24" height="24"/>
+            <rect x="168" y="576" width="24" height="72"/>
+          </g>
+        </svg>
+        <figcaption><b>logo_white.svg</b>原文件 · 白像素<br>深色主题下使用</figcaption>
+      </figure>
+      <figure class="swatch light">
+        <svg viewBox="0 0 360 672" aria-hidden="true">
+          <g fill="#000000" shape-rendering="crispEdges">
+            <rect x="144" y="48" width="24" height="216"/><rect x="168" y="72" width="24" height="72"/>
+            <rect x="120" y="120" width="24" height="120"/><rect x="168" y="192" width="24" height="120"/>
+            <rect x="192" y="264" width="24" height="96"/><rect x="120" y="288" width="24" height="72"/>
+            <rect x="216" y="288" width="24" height="168"/><rect x="96" y="336" width="24" height="120"/>
+            <rect x="240" y="336" width="24" height="96"/><rect x="72" y="360" width="24" height="48"/>
+            <rect x="120" y="408" width="24" height="72"/><rect x="192" y="408" width="24" height="72"/>
+            <rect x="48" y="432" width="24" height="120"/><rect x="144" y="432" width="48" height="48"/>
+            <rect x="288" y="432" width="24" height="120"/><rect x="72" y="480" width="24" height="96"/>
+            <rect x="264" y="480" width="24" height="96"/><rect x="96" y="504" width="48" height="72"/>
+            <rect x="216" y="504" width="48" height="96"/><rect x="24" y="528" width="24" height="24"/>
+            <rect x="312" y="528" width="24" height="24"/><rect x="144" y="552" width="24" height="72"/>
+            <rect x="192" y="552" width="24" height="72"/><rect x="120" y="576" width="24" height="24"/>
+            <rect x="168" y="576" width="24" height="72"/>
+          </g>
+        </svg>
+        <figcaption><b>logo_black.svg</b>原文件 · 黑像素<br>浅色主题下使用</figcaption>
+      </figure>
+    </div>
+    <p class="asset-note">
+      按钮内复用 <code>#logo-glyph</code> 符号：矩形像素数据与源文件一致，去掉写死的填充色，
+      改为 <code>fill: var(--logo-fill)</code>，深色主题取亮像素、浅色主题取深像素，一套图案两种主题自适应。
+    </p>
+  </section>
+
+  <!-- ============ 规格表 ============ -->
+  <section class="card">
+    <h2 class="sec-title">按钮规格表</h2>
+    <p class="sec-desc">大 / 中 / 小三档尺寸参数；Logo 图标保持 360:672 原始宽高比，向左突出量随尺寸缩放。</p>
+    <table class="spec-table">
+      <thead><tr><th>尺寸</th><th>高度</th><th>字号</th><th>圆角</th><th>图标 宽×高</th><th>左侧突出</th><th>左内边距</th><th>右内边距</th></tr></thead>
+      <tbody>
+        <tr><td>大号 L</td><td>60px</td><td>17px</td><td>8px</td><td>47×88</td><td>18px</td><td>77px</td><td>34px</td></tr>
+        <tr><td>中号 M</td><td>48px</td><td>15px</td><td>7px</td><td>37×70</td><td>14px</td><td>61px</td><td>28px</td></tr>
+        <tr><td>小号 S</td><td>36px</td><td>13px</td><td>6px</td><td>28×52</td><td>11px</td><td>47px</td><td>22px</td></tr>
+        <tr><td>解析用加大</td><td>84px</td><td>20px</td><td>10px</td><td>64×120</td><td>24px</td><td>102px</td><td>40px</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <footer>
+    万兽之王 · Logo 骑跨边框按钮设计原型<br>
+    图标源：assets/icon/logo_black.svg · logo_white.svg ｜ 色板：lib/app/theme/app_theme.dart
+  </footer>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+  // ============ 主题切换（默认跟随系统，切换后记忆） ============
+  const root = document.documentElement;
+  const saved = localStorage.getItem('ws-theme');
+  const prefersDark = matchMedia('(prefers-color-scheme: dark)').matches;
+  const initial = saved || (prefersDark ? 'dark' : 'light');
+
+  function setTheme(t){
+    root.dataset.theme = t;
+    localStorage.setItem('ws-theme', t);
+    document.querySelectorAll('.seg button').forEach(b =>
+      b.setAttribute('aria-pressed', b.dataset.theme === t ? 'true' : 'false'));
+  }
+  setTheme(initial);
+
+  // ============ 按钮点击 Toast 预览 ============
+  const toast = document.getElementById('toast');
+  let toastTimer;
+  document.querySelectorAll('.btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      toast.textContent = '已点击：' + btn.textContent.trim();
+      toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 1600);
+    });
+  });
+</script>
+</body>
+</html>
