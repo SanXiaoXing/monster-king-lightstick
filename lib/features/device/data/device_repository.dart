@@ -86,6 +86,12 @@ class DeviceRepository {
     await fbp.BluetoothDevice.fromId(device.address).disconnect();
   }
 
+  /// 平台层当前是否已连接（fbp Dart 侧缓存，connect 成功后置 true）。
+  ///
+  /// 供 ViewModel 在 connect 后确认"已连接"是真实会话，而非状态残留。
+  bool isConnected(Lightstick device) =>
+      fbp.BluetoothDevice.fromId(device.address).isConnected;
+
   /// 向设备写入原始命令字节（灯光/座位等，经 FFE1 writeNoResponse）。
   ///
   /// 命中缓存直接写入（单次 BLE 事务，毫秒级）；未命中（如系统侧已连接、
