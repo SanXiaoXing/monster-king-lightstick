@@ -51,8 +51,9 @@ class _HomePageState extends State<HomePage> {
         fit: StackFit.expand,
         children: [
           _buildPage(0, DevicePage(viewModel: _vm)),
-          _buildPage(1, ColorPickerPage(viewModel: _vm)),
-          _buildPage(2, MusicPage(viewModel: _vm)),
+          _buildPage(
+              1, ColorPickerPage(viewModel: _vm, onGoConnect: () => _go(0))),
+          _buildPage(2, MusicPage(viewModel: _vm, onGoConnect: () => _go(0))),
           _buildPage(3, SettingsPage(viewModel: _vm)),
         ],
       ),
