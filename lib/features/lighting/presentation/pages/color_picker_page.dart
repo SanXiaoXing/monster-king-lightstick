@@ -16,8 +16,9 @@ import '../../domain/lighting_effect.dart';
 
 /// 调色页（Dock「调色」Tab）。
 ///
-/// 对齐原型调色屏：圆形 RGB 色环 + hex 输入 + 亮度滑杆 + 9 灯效 3×3。
-/// 顶部统一用 [AppTopBar]；未连接设备时正文锁定为连接引导。
+/// 对齐 prototype_redesign 中调色屏：圆形 RGB 色环 + hex 输入 + 亮度滑杆
+/// + 8 灯效单列 tile。顶部统一用 [AppTopBar]；未连接设备时
+/// 正文锁定为连接引导。
 class ColorPickerPage extends StatefulWidget {
   const ColorPickerPage({super.key, required this.viewModel, this.onGoConnect});
 
@@ -210,9 +211,9 @@ class _ColorPickerPageState extends State<ColorPickerPage> {
                     },
                   ),
                   const SizedBox(height: 6),
-                  _SectionLabel('灯光效果（9 种）'),
+                  _SectionLabel('灯光效果'),
                   const SizedBox(height: 8),
-                  _EffectGrid(
+                  _EffectList(
                     selected: _fx,
                     onPick: (fx) {
                       setState(() => _fx = fx);
@@ -445,101 +446,123 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
-class _EffectGrid extends StatelessWidget {
-  const _EffectGrid({required this.selected, required this.onPick});
+
+class _EffectList extends StatelessWidget {
+  const _EffectList({required this.selected, required this.onPick});
   final LightingFx selected;
   final void Function(LightingFx fx) onPick;
 
-  static const _effects = <(LightingFx, IconData)>[
-    (LightingFx.constantlyOn, Icons.lightbulb_rounded),
-    (LightingFx.breathe, Icons.waves_rounded),
-    (LightingFx.flashMob, Icons.bolt_rounded),
-    (LightingFx.blink, Icons.visibility_rounded),
-    (LightingFx.party, Icons.celebration_rounded),
-    (LightingFx.rainbow, Icons.gradient_rounded),
-    (LightingFx.starrySky, Icons.star_rounded),
-    (LightingFx.random, Icons.shuffle_rounded),
-    (LightingFx.blackScreen, Icons.nightlight_rounded),
+  /// 三元组：(灯效、图标、右侧短描述) 。描述保留 prototype_redesign 的克制：
+  /// 时长用 6 sec / 160 ms 这类数字 + 物理单位，模式用 15 色循环 / 随机闪烁 /
+  /// 关机 等业务关键词，不堆形容词。
+  static const _effects = <(LightingFx, IconData, String)>[
+    (LightingFx.constantlyOn, Icons.lightbulb_rounded, '恒亮'),
+    (LightingFx.breathe, Icons.waves_rounded, '6 sec'),
+    (LightingFx.flashMob, Icons.bolt_rounded, '160 ms'),
+    (LightingFx.blink, Icons.visibility_rounded, '2 sec'),
+    (LightingFx.party, Icons.celebration_rounded, '随机'),
+    (LightingFx.rainbow, Icons.gradient_rounded, '15 色循环'),
+    (LightingFx.starrySky, Icons.star_rounded, '随机闪烁'),
+    (LightingFx.blackScreen, Icons.nightlight_rounded, '关机'),
   ];
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return GridView.count(
-      crossAxisCount: 3,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 8,
-      crossAxisSpacing: 8,
-      childAspectRatio: 0.92,
+    return Column(
       children: [
-        for (final (fx, icon) in _effects)
-          _EffectBtn(
-            icon: icon,
-            label: fx.label,
-            active: selected == fx,
-            onTap: () => onPick(fx),
+        for (var i = 0; i < _effects.length; i++) ...[
+          _EffectListTile(
+            fx: _effects[i].$1,
+            icon: _effects[i].$2,
+            descriptor: _effects[i].$3,
+            active: selected == _effects[i].$1,
+            onTap: () => onPick(_effects[i].$1),
             accent: scheme.primary,
             surface: scheme.surfaceContainerLow,
             outline: scheme.outlineVariant,
             onSurface: scheme.onSurface,
-            onSurfaceVariant: scheme.onSurfaceVariant,
+            muted: scheme.onSurfaceVariant,
           ),
+          if (i < _effects.length - 1) const SizedBox(height: 8),
+        ],
       ],
     );
   }
 }
 
-class _EffectBtn extends StatelessWidget {
-  const _EffectBtn({
+class _EffectListTile extends StatelessWidget {
+  const _EffectListTile({
+    required this.fx,
     required this.icon,
-    required this.label,
+    required this.descriptor,
     required this.active,
     required this.onTap,
     required this.accent,
     required this.surface,
     required this.outline,
     required this.onSurface,
-    required this.onSurfaceVariant,
+    required this.muted,
   });
 
+  final LightingFx fx;
   final IconData icon;
-  final String label;
+  final String descriptor;
   final bool active;
   final VoidCallback onTap;
-  final Color accent, surface, outline, onSurface, onSurfaceVariant;
+  final Color accent, surface, outline, onSurface, muted;
 
   @override
   Widget build(BuildContext context) {
     return Material(
       color: active ? AppColors.accentSoft : surface,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(18),
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: active ? accent : outline),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: active ? accent : outline,
+              width: 1,
+            ),
           ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+          child: Row(
             children: [
-              TweenAnimationBuilder<double>(
-                tween: Tween(begin: 1.0, end: active ? 1.15 : 1.0),
-                duration: const Duration(milliseconds: 250),
-                curve: Curves.easeOutBack,
-                builder: (context, s, child) =>
-                    Transform.scale(scale: s, child: child),
-                child: Icon(icon, size: 22, color: accent),
+              SizedBox(
+                width: 24,
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 1.0, end: active ? 1.10 : 1.0),
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOutBack,
+                  builder: (context, s, child) =>
+                      Transform.scale(scale: s, child: child),
+                  child: Icon(icon, size: 18, color: accent),
+                ),
               ),
-              const SizedBox(height: 7),
-              Text(label,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  fx.label,
                   style: TextStyle(
-                      color: onSurface,
-                      fontSize: 11,
-                      letterSpacing: 0.1)),
+                    color: onSurface,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: -0.05,
+                  ),
+                ),
+              ),
+              Text(
+                descriptor,
+                style: TextStyle(
+                  color: muted,
+                  fontSize: 11,
+                  letterSpacing: 0.4,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
             ],
           ),
         ),
