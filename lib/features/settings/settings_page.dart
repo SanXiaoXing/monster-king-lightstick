@@ -4,9 +4,9 @@ import '../../app/router/app_router.dart';
 import '../../app/theme/app_theme.dart';
 import '../../shared/theme/spacing.dart';
 import '../../shared/widgets/app_top_bar.dart';
-import '../../shared/widgets/brand_logo.dart';
 import '../../shared/widgets/card_decoration.dart';
 import '../../shared/widgets/sliding_segment.dart';
+import '../about/about_page.dart';
 import '../about/tips_page.dart';
 import '../device/presentation/device_view_model.dart';
 
@@ -16,7 +16,7 @@ import '../device/presentation/device_view_model.dart';
 /// 1. 显示模式（主题选择器，3 选 1 + 滑动胶囊物理反馈）
 /// 2. 已连接设备（当前连接状态，单行展示，不提供「清除」子入口）
 /// 3. 温馨提示（点击跳 [TipsPage]）
-/// 4. 关于（品牌 + 版本信息，纯展示）
+/// 4. 关于（品牌 + 版本信息，点击跳 [AboutPage]）
 ///
 /// 主题选择器与音乐律动选择器共用共享组件 [SlidingSegment]
 /// （同一份临界阻尼弹簧：mass 1 / stiffness 246 / damping 31.4，
@@ -36,6 +36,10 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   void _openTips() {
     Navigator.of(context).push(AppRouter.page(const TipsPage()));
+  }
+
+  void _openAbout() {
+    Navigator.of(context).push(AppRouter.page(const AboutPage()));
   }
 
   @override
@@ -117,71 +121,25 @@ class _SettingsPageState extends State<SettingsPage> {
                     icon: Icons.warning_amber_rounded,
                     iconColor: scheme.primary,
                     title: '温馨提示',
-                    subtitle: '阅读安全提示',
+                    subtitle: '阅读提示，以防诈骗',
                     chevron: true,
                     onTap: _openTips,
                   ),
                 ]),
                 const SizedBox(height: Spacing.gap16),
 
-                // 4. 关于：品牌 + 版本信息（纯展示）
+                // 4. 关于：品牌 + 版本信息，点击进入关于页
                 const _SectionLabel('关于'),
-                _GroupCard(
-                  padding: const EdgeInsets.fromLTRB(14, 16, 14, 16),
-                  children: [
-                    Row(
-                      children: [
-                        const BrandLogo(size: Size(20, 36)),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '万兽之王',
-                                style: TextStyle(
-                                  color: scheme.onSurface,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                '应援棒控制 App',
-                                style: TextStyle(
-                                  color: scheme.onSurfaceVariant,
-                                  fontSize: 12,
-                                  letterSpacing: 0.2,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Text(
-                          'v1.0.0',
-                          style: TextStyle(
-                            color: scheme.onSurfaceVariant,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                            fontFeatures: const [FontFeature.tabularFigures()],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                Center(
-                  child: Text(
-                    '万兽之王应援棒控制 · 字节级协议对齐',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: scheme.onSurfaceVariant.withValues(alpha: 0.65),
-                      fontSize: 11,
-                      letterSpacing: 0.4,
-                    ),
+                _GroupCard(children: [
+                  _NavTile(
+                    icon: Icons.info_outline_rounded,
+                    iconColor: scheme.primary,
+                    title: AboutPage.appName,
+                    subtitle: AboutPage.appVersion,
+                    chevron: true,
+                    onTap: _openAbout,
                   ),
-                ),
+                ]),
               ]),
             ),
           ),

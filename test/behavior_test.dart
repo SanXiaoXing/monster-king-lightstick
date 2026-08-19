@@ -18,6 +18,7 @@ import 'package:wanshou/features/device/domain/device_state.dart';
 import 'package:wanshou/features/device/domain/lightstick.dart';
 import 'package:wanshou/features/device/presentation/device_view_model.dart';
 import 'package:wanshou/features/device/presentation/pages/device_page.dart';
+import 'package:wanshou/features/about/about_page.dart';
 import 'package:wanshou/features/home/presentation/widgets/glass_tab_bar.dart';
 import 'package:wanshou/features/lighting/presentation/pages/color_picker_page.dart';
 import 'package:wanshou/features/settings/settings_page.dart';
@@ -145,14 +146,17 @@ void main() {
     expect(find.text('已连接'), findsOneWidget);
 
     // 温馨提示入口（滚动到唯一副标题，避免与分组标签同名歧义）
-    await tester.scrollUntilVisible(find.text('阅读安全提示'), 200);
+    await tester.scrollUntilVisible(find.text('阅读提示，以防诈骗'), 200);
     expect(find.text('温馨提示'), findsWidgets);
-    expect(find.text('阅读安全提示'), findsOneWidget);
+    expect(find.text('阅读提示，以防诈骗'), findsOneWidget);
 
-    // 关于分组
-    await tester.scrollUntilVisible(find.text('万兽之王'), 200);
-    expect(find.text('万兽之王'), findsOneWidget);
+    // 关于分组：品牌名 + 版本，点击进入关于页
+    await tester.scrollUntilVisible(find.text('宝宝剑'), 200);
+    expect(find.text('宝宝剑'), findsOneWidget);
     expect(find.text('v1.0.0'), findsOneWidget);
+    await tester.tap(find.text('宝宝剑'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AboutPage), findsOneWidget);
 
     // 已删除的项不再渲染
     expect(find.text('清除设备记录'), findsNothing);

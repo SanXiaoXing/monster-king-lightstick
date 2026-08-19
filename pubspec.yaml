@@ -42,6 +42,7 @@ dependencies:
   freezed_annotation: ^2.4.4
   # 麦克风采集（6.x 兼容 Dart 3.11；7.x 要求 Flutter 3.44/Dart 3.12）
   record: ^7.1.1
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:
