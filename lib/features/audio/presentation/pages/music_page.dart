@@ -8,6 +8,7 @@ import '../../../device/data/device_repository.dart';
 import '../../../device/presentation/device_view_model.dart';
 import '../../../lighting/data/lighting_repository.dart';
 import '../../../lighting/domain/lighting_effect.dart';
+import '../../../settings/settings_store.dart';
 import '../../data/audio_repository.dart';
 import '../../domain/audio_analysis.dart';
 import '../widgets/circular_visualizer.dart';
@@ -36,10 +37,17 @@ class _MusicPageState extends State<MusicPage> {
   final ValueNotifier<AudioFrame?> _frameNotifier = ValueNotifier(null);
   StreamSubscription<AudioFrame>? _sub;
 
-  // 律动模式：单色 / 七彩 / 强烈 / 柔和
-  String _mode = '单色律动';
-  double _sensitivity = 0.6;
+  // 律动模式：单色 / 七彩 / 强烈 / 柔和（初始值来自设置页默认）
+  String _mode = SettingsStore.defaultMode;
+  double _sensitivity = SettingsStore.defaultSensitivity;
   bool _active = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _mode = SettingsStore.readMode();
+    _sensitivity = SettingsStore.readSensitivity();
+  }
 
   /// 荧光棒下发节流：分析帧 ~86fps（50% 重叠窗），BLE writeNoResponse
   /// 实测可稳定承载 ~16Hz；取 60ms 在跟手性与无线可靠性间折中。

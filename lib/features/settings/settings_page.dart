@@ -1,13 +1,18 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../app/theme/app_theme.dart';
 import '../../shared/widgets/brand_logo.dart';
 import '../device/presentation/device_view_model.dart';
+import 'settings_store.dart';
 
 /// 设置页（Dock「设置」Tab）。
 ///
-/// 对齐原型设置屏：4 分组卡片（我的设备 / 灯光偏好 / 音频律动 / 关于），
-/// 顶部主题模式 SegmentedButton。`embedded=true` 时无 AppBar，由 Dock 壳托管。
+/// 对齐原型设置屏，只保留真正生效的项：主题模式 / 我的设备 /
+/// 灯光偏好（默认亮度）/ 音频律动（默认模式 + 灵敏度）/ 关于。
+/// 三个默认值经 [SettingsStore] 持久化，作为音乐页与调色页的初始值。
+/// `embedded=true` 时无 AppBar，由 Dock 壳托管。
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key, required this.viewModel, this.embedded = false});
 
@@ -19,9 +24,25 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  double _defaultBrightness = 0.8;
-  final String _defaultMode = '单色律动';
-  double _defaultSensitivity = 0.6;
+  late double _defaultBrightness;
+  late String _defaultMode;
+  late double _defaultSensitivity;
+
+  /// 律动模式分段：短标签 ↔ 完整模式名（与音乐页四档一致）。
+  static const _modes = <(String, String)>[
+    ('单色', '单色律动'),
+    ('七彩', '七彩律动'),
+    ('强烈', '强烈'),
+    ('柔和', '柔和'),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _defaultBrightness = SettingsStore.readBrightness();
+    _defaultMode = SettingsStore.readMode();
+    _defaultSensitivity = SettingsStore.readSensitivity();
+  }
 
   void _toast(String msg) {
     ScaffoldMessenger.of(context)
@@ -59,7 +80,7 @@ class _SettingsPageState extends State<SettingsPage> {
             padding: const EdgeInsets.symmetric(horizontal: 18),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
-                // 主题模式（顶部独立段）
+                // 主题模式
                 _SectionLabel('主题模式'),
                 _GroupCard(children: [
                   ValueListenableBuilder<ThemeMode>(
@@ -91,7 +112,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     },
                   ),
                 ]),
-                const SizedBox(height: 22),
+                const SizedBox(height: 26),
 
                 // 我的设备
                 _SectionLabel('我的设备'),
@@ -123,7 +144,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     onTap: _forgetDevice,
                   ),
                 ]),
-                const SizedBox(height: 22),
+                const SizedBox(height: 26),
 
                 // 灯光偏好
                 _SectionLabel('灯光偏好'),
@@ -136,36 +157,51 @@ class _SettingsPageState extends State<SettingsPage> {
                       width: 110,
                       child: Slider(
                         value: _defaultBrightness,
-                        onChanged: (v) =>
-                            setState(() => _defaultBrightness = v),
+                        onChanged: (v) {
+                          setState(() => _defaultBrightness = v);
+                          unawaited(SettingsStore.writeBrightness(v));
+                        },
                       ),
                     ),
                   ),
-                  const _Divider(),
-                  _Tile(
-                    icon: Icons.lightbulb_rounded,
-                    title: '启动灯效',
-                    subtitle: '常亮',
-                    trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: () => _toast('启动灯效选择待 Rust 协议层落地'),
-                  ),
-                  const _Divider(),
-                  _Tile(
-                    icon: Icons.palette_rounded,
-                    title: '记忆上次颜色',
-                    subtitle: '0A84FF',
-                    trailing: Switch(
-                      value: true,
-                      onChanged: (v) =>
-                          _toast(v ? '已开启颜色记忆' : '颜色记忆已关闭'),
-                    ),
-                  ),
                 ]),
-                const SizedBox(height: 22),
+                const SizedBox(height: 26),
 
                 // 音频律动
                 _SectionLabel('音频律动'),
                 _GroupCard(children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('默认律动模式',
+                            style: TextStyle(
+                              color: scheme.onSurface,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            )),
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          width: double.infinity,
+                          child: SegmentedButton<String>(
+                            segments: [
+                              for (final (label, mode) in _modes)
+                                ButtonSegment(
+                                    value: mode, label: Text(label)),
+                            ],
+                            selected: {_defaultMode},
+                            onSelectionChanged: (s) {
+                              setState(() => _defaultMode = s.first);
+                              unawaited(SettingsStore.writeMode(s.first));
+                            },
+                            showSelectedIcon: false,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const _Divider(),
                   _Tile(
                     icon: Icons.tune_rounded,
                     title: '默认灵敏度',
@@ -174,29 +210,15 @@ class _SettingsPageState extends State<SettingsPage> {
                       width: 110,
                       child: Slider(
                         value: _defaultSensitivity,
-                        onChanged: (v) =>
-                            setState(() => _defaultSensitivity = v),
+                        onChanged: (v) {
+                          setState(() => _defaultSensitivity = v);
+                          unawaited(SettingsStore.writeSensitivity(v));
+                        },
                       ),
                     ),
                   ),
-                  const _Divider(),
-                  _Tile(
-                    icon: Icons.tonality_rounded,
-                    title: '默认律动模式',
-                    subtitle: _defaultMode,
-                    trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: () => _toast('律动模式选择待音频层落地'),
-                  ),
-                  const _Divider(),
-                  _Tile(
-                    icon: Icons.equalizer_rounded,
-                    title: '频谱样式',
-                    subtitle: '镜像柱状+波形线',
-                    trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: () => _toast('频谱样式暂固定'),
-                  ),
                 ]),
-                const SizedBox(height: 22),
+                const SizedBox(height: 26),
 
                 // 关于
                 _SectionLabel('关于'),
@@ -234,22 +256,6 @@ class _SettingsPageState extends State<SettingsPage> {
                             )),
                       ],
                     ),
-                  ),
-                  const _Divider(),
-                  _Tile(
-                    icon: Icons.code_rounded,
-                    title: '开源协议',
-                    subtitle: 'MIT',
-                    trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: () => _toast('协议页面待构建'),
-                  ),
-                  const _Divider(),
-                  _Tile(
-                    icon: Icons.feedback_rounded,
-                    title: '反馈与建议',
-                    subtitle: '帮助改进',
-                    trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: () => _toast('反馈通道待接入'),
                   ),
                 ]),
                 const SizedBox(height: 16),

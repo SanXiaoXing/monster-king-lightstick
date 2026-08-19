@@ -104,7 +104,7 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets('设置页：灯光/音频偏好分组渲染与默认值', (tester) async {
+  testWidgets('设置页：分组渲染、默认值', (tester) async {
     final vm = await _vm(connected: true);
     addTearDown(vm.dispose);
     await tester.pumpWidget(_wrap(SettingsPage(viewModel: vm)));
@@ -113,14 +113,26 @@ void main() {
     // 主题模式（顶部）
     expect(find.text('跟随系统'), findsOneWidget);
 
-    // 灯光偏好分组（懒构建列表，滚动到可见后断言默认值）
+    // 我的设备分组
+    await tester.scrollUntilVisible(find.text('清除设备记录'), 200);
+    expect(find.text('清除设备记录'), findsOneWidget);
+
+    // 灯光偏好分组：默认亮度 80%
     await tester.scrollUntilVisible(find.text('默认亮度'), 200);
     expect(find.text('80%'), findsOneWidget);
 
-    // 音频律动分组
+    // 音频律动分组：默认律动模式（单色）+ 默认灵敏度 60%
+    await tester.scrollUntilVisible(find.text('默认律动模式'), 200);
+    expect(find.text('单色'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('默认灵敏度'), 200);
     expect(find.text('60%'), findsOneWidget);
-    expect(find.text('单色律动'), findsOneWidget);
+
+    // 无用 stub 项已删除：不再渲染任何待构建占位入口
+    expect(find.text('启动灯效'), findsNothing);
+    expect(find.text('记忆上次颜色'), findsNothing);
+    expect(find.text('频谱样式'), findsNothing);
+    expect(find.text('开源协议'), findsNothing);
+    expect(find.text('反馈与建议'), findsNothing);
   });
 
   testWidgets('调色盘：默认 #0A84FF，色环取色/hex 回填/亮度滑杆', (tester) async {

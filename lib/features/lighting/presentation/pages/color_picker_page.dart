@@ -7,6 +7,7 @@ import '../../../../app/theme/app_theme.dart';
 import '../../../../shared/widgets/slider_row.dart';
 import '../../../device/data/device_repository.dart';
 import '../../../device/presentation/device_view_model.dart';
+import '../../../settings/settings_store.dart';
 import '../../data/lighting_repository.dart';
 import '../../domain/lighting_effect.dart';
 
@@ -29,13 +30,20 @@ class _ColorPickerPageState extends State<ColorPickerPage> {
 
   // HSV 状态：默认 #0A84FF（iOS 蓝）
   double _hue = 210, _sat = 1, _val = 1;
-  double _brightness = 0.8;
+  double _brightness = SettingsStore.defaultBrightness;
   LightingFx _fx = LightingFx.constantlyOn;
   final _hexCtrl = TextEditingController(text: '0A84FF');
   Timer? _colorDebounce;
   DateTime? _lastColorSent;
   bool _colorSending = false;
   static const _liveInterval = Duration(milliseconds: 70);
+
+  @override
+  void initState() {
+    super.initState();
+    // 初始亮度来自设置页默认
+    _brightness = SettingsStore.readBrightness();
+  }
 
   @override
   void dispose() {
