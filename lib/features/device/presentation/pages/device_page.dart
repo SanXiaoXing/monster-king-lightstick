@@ -205,7 +205,7 @@ class _DeviceCard extends StatelessWidget {
                           height: 34,
                           child: BrandLogo(
                             size: const Size(18, 34),
-                            color: scheme.primary,
+                            color: scheme.onSurface,
                           ),
                         ),
                         const SizedBox(width: 12),
