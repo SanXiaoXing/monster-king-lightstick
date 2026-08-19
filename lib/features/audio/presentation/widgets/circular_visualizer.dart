@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
 import '../../../../app/theme/app_theme.dart';
+import '../../../lighting/domain/light_color_state.dart';
 import '../../domain/audio_analysis.dart';
 
 /// Audio-reactive 圆形可视化：发光圆环 + 中心光球 + 强拍粒子爆发。
@@ -48,10 +49,17 @@ class _CircularVisualizerState extends State<CircularVisualizer>
   void initState() {
     super.initState();
     widget.frameNotifier.addListener(_onFrame);
+    // 调色盘选色变化 → 单色律动可视化颜色实时跟随（与下发色一致）
+    selectedLightColor.addListener(_onLightColorChanged);
     _ticker = createTicker(_onTick);
     if (widget.active) {
       _ticker.start();
     }
+  }
+
+  void _onLightColorChanged() {
+    if (!mounted) return;
+    setState(() {});
   }
 
   @override
@@ -82,6 +90,7 @@ class _CircularVisualizerState extends State<CircularVisualizer>
   @override
   void dispose() {
     widget.frameNotifier.removeListener(_onFrame);
+    selectedLightColor.removeListener(_onLightColorChanged);
     _ticker.dispose();
     _repaint.dispose();
     super.dispose();
@@ -111,7 +120,8 @@ class _CircularVisualizerState extends State<CircularVisualizer>
                 repaint: _repaint,
                 sensitivity: widget.sensitivity,
                 isDark: AppColors.isDark(scheme),
-                accent: scheme.primary,
+                // 单色律动渲染色 = 调色盘当前选中色（与下发色保持一致）
+                accent: selectedLightColor.value,
                 mode: widget.mode,
               ),
             ),

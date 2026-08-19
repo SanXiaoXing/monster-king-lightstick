@@ -11,6 +11,7 @@ import '../../../../shared/widgets/slider_row.dart';
 import '../../../device/data/device_repository.dart';
 import '../../../device/presentation/device_view_model.dart';
 import '../../data/lighting_repository.dart';
+import '../../domain/light_color_state.dart';
 import '../../domain/lighting_effect.dart';
 
 /// 调色页（Dock「调色」Tab）。
@@ -70,6 +71,7 @@ class _ColorPickerPageState extends State<ColorPickerPage> {
         _sat = hsv.saturation;
         _val = hsv.value;
       });
+      selectedLightColor.value = _color;
       _scheduleColorSend();
     }
   }
@@ -183,6 +185,7 @@ class _ColorPickerPageState extends State<ColorPickerPage> {
                         _sat = s;
                         _val = 1; // 色环仅编码色相+饱和度，明度恒为满值
                       });
+                      selectedLightColor.value = _color;
                       _syncHex();
                       _scheduleColorSend();
                     },

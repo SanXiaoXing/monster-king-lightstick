@@ -11,6 +11,7 @@ import '../../../../shared/widgets/sliding_segment.dart';
 import '../../../device/data/device_repository.dart';
 import '../../../device/presentation/device_view_model.dart';
 import '../../../lighting/data/lighting_repository.dart';
+import '../../../lighting/domain/light_color_state.dart';
 import '../../../lighting/domain/lighting_effect.dart';
 import '../../data/audio_repository.dart';
 import '../../domain/audio_analysis.dart';
@@ -58,7 +59,17 @@ class _MusicPageState extends State<MusicPage> {
   bool _stickBusy = false;
 
   @override
+  void initState() {
+    super.initState();
+    // 调色盘选色变化 → 单色律动会话内实时跟随（节流同 _stickInterval）
+    selectedLightColor.addListener(_onLightColorChanged);
+    // 进入页面即同步一次：用户可能先选好色再进来，确保引擎 base 色一致
+    _syncBaseColor();
+  }
+
+  @override
   void dispose() {
+    selectedLightColor.removeListener(_onLightColorChanged);
     _sub?.cancel();
     _audio.dispose();
     _frameNotifier.dispose();
@@ -78,20 +89,39 @@ class _MusicPageState extends State<MusicPage> {
   void _onMode(String m) {
     setState(() => _mode = m);
     unawaited(_audio.setRhythmMode(m));
-    // 单色律动用当前主题强调色作为固定颜色
+    // 单色律动用调色盘当前选中色作为固定颜色（与调色盘保持一致）
     if (m == '单色律动') {
-      final accent = Theme.of(context).colorScheme.primary;
-      unawaited(_audio.setRhythmBaseColor(
-        (accent.r * 255).round(),
-        (accent.g * 255).round(),
-        (accent.b * 255).round(),
-      ));
+      _syncBaseColor();
     }
     if (_ensureConnected()) {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(SnackBar(content: Text('已切换律动：$m')));
     }
+  }
+
+  /// 调色盘选色变化 → 单色律动会话内实时跟随（节流同 _stickInterval）。
+  void _onLightColorChanged() {
+    if (_mode != '单色律动') return;
+    final now = DateTime.now();
+    if (_lastColorSync != null &&
+        now.difference(_lastColorSync!) < _stickInterval) {
+      return;
+    }
+    _lastColorSync = now;
+    _syncBaseColor();
+  }
+
+  DateTime? _lastColorSync;
+
+  /// 把调色盘当前选中色同步为单色律动引擎 base 色（Rust 引擎不可用时静默）。
+  void _syncBaseColor() {
+    final c = selectedLightColor.value;
+    unawaited(_audio.setRhythmBaseColor(
+      (c.r * 255).round(),
+      (c.g * 255).round(),
+      (c.b * 255).round(),
+    ));
   }
 
   /// 音频帧 → 荧光棒灯效（节流 60ms + 在途丢帧；未连接/写失败静默，不刷屏）。
