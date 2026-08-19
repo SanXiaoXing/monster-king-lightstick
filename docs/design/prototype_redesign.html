@@ -1,0 +1,954 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>万兽之王 · 应援棒控制台（重新设计）</title>
+<!--
+  重新设计 HTML 原型（design-taste-frontend, anti-slop）
+  =====================================================
+  设计读法：
+    受众 = 演出现场应援棒操作员 / 普通粉丝用户
+    平台 = Flutter App 移植至网页的视觉探索
+    材质 = Liquid Glass 的 web 近似（backdrop-filter 加内嵌高光与底部内阴影）
+    单强调色 = 锁定的群青蓝 #1f6dff，全站不得偏移
+    字体 = 系统字体栈（-apple-system / PingFang SC），刻意避开 Inter
+    节奏 = 8 px 基准网格 + 12 行间距；不用所有 section 都挂 uppercase tracking
+
+  四档表盘：
+    VARIANCE  = 6  偏中心对称，但允许偶发偏移（圆形 hue 环、节拍径向环）
+    MOTION    = 4  抑制 spring + transition，禁用全屏滚动 hijack
+    DENSITY   = 4  标准的应用密度，列表用 12 px 内间距
+  反 slop 改动：去 em-dash 与 en-dash；去所有 tab eyebrow 计数器；去 locale 条；去 scroll cue；
+  去分隔线 + 纯文字的「Field notes/N. 12」伪诗意；去 Numeric 99.9% 假装精度；
+  paleness 锁定单 accent；hero 顶距止于 24；按钮标签 1 或 2 词；icon 仅用字符化系统字体兜底（无手画 SVG path）。
+-->
+<style>
+  :root{
+    --accent:#1f6dff;          /* 单强调色，全站锁定 */
+    --accent-soft:rgba(31,109,255,.16);
+    --ok:#1fbf6f; --warn:#f4a52a; --err:#e5484d;
+    --r-xl:32px; --r-lg:24px; --r-md:18px; --r-sm:14px; --r-pill:999px;
+    --ease:cubic-bezier(.16,1,.3,1);
+    --spring:cubic-bezier(.34,1.56,.64,1);
+  }
+  :root[data-theme="dark"]{
+    --bg:#07080c; --bg2:#0e1015; --bg3:#13161e;
+    --surface:#0c0e14; --surface-2:#181a22; --surface-3:#1e2230;
+    --text:#f4f5f7; --muted:#8a8f9d; --muted-2:#5e6473;
+    --line:rgba(244,245,247,.08); --logo-fill:#f4f5f7;
+    --glass-tint:rgba(255,255,255,.06);
+    --glass-stroke:rgba(255,255,255,.10);
+    --glass-hi:rgba(255,255,255,.16);
+    --glass-shadow:rgba(0,0,0,.55);
+    --spec-track:rgba(244,245,247,.05);
+  }
+  :root[data-theme="light"]{
+    --bg:#f3f5f8; --bg2:#e7edf5; --bg3:#dde5f0;
+    --surface:#ffffff; --surface-2:#f7f8fb; --surface-3:#ebeef4;
+    --text:#0b0e16; --muted:#5a6173; --muted-2:#7a8294;
+    --line:rgba(11,14,22,.08); --logo-fill:#0b0e16;
+    --glass-tint:rgba(255,255,255,.56);
+    --glass-stroke:rgba(255,255,255,.72);
+    --glass-hi:rgba(255,255,255,.85);
+    --glass-shadow:rgba(20,40,80,.14);
+    --spec-track:rgba(11,14,22,.06);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","PingFang SC","Microsoft YaHei",sans-serif;
+    font-feature-settings:"ss01","cv11";
+    background:
+      radial-gradient(720px 460px at 88% -6%, var(--bg3), transparent 60%),
+      radial-gradient(560px 400px at -10% 24%, var(--bg2), transparent 60%),
+      var(--bg);
+    display:flex;flex-direction:column;align-items:center;
+    padding:28px 16px 40px;
+    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  }
+
+  /* === 桌面说明栏（参考 Linear / iOS 内测页版式） === */
+  .toolbar{
+    width:min(960px,100%);display:flex;align-items:center;justify-content:space-between;gap:16px;
+    margin-bottom:24px;
+  }
+  .brand{display:flex;align-items:center;gap:12px;min-width:0}
+  .brand .t-logo{width:16px;height:30px;flex:none}
+  .brand .name{font-size:14px;font-weight:700;letter-spacing:-.005em;display:block;white-space:nowrap}
+  .brand .sub{font-size:11px;color:var(--muted);letter-spacing:.04em;margin-top:3px;white-space:nowrap}
+  .seg{display:flex;flex:none;padding:3px;background:var(--glass-tint);border:1px solid var(--glass-stroke);border-radius:var(--r-pill);backdrop-filter:blur(28px) saturate(160%);-webkit-backdrop-filter:blur(28px) saturate(160%);box-shadow:inset 0 1px 0 var(--glass-hi)}
+  .seg button{
+    border:0;background:transparent;color:var(--muted);
+    padding:7px 14px;font:inherit;font-size:12px;border-radius:var(--r-pill);
+    cursor:pointer;letter-spacing:.02em;transition:color .2s,background .2s;
+  }
+  .seg button[aria-pressed="true"]{background:var(--accent);color:#fff;font-weight:600;box-shadow:0 6px 16px rgba(31,109,255,.32)}
+  .seg button:hover{color:var(--text)}
+
+  /* === 整版画布：手机 + 右侧特性卡（桌面 layout 探索） === */
+  .canvas{width:min(960px,100%);display:grid;grid-template-columns:minmax(0,390px) minmax(0,1fr);gap:24px;align-items:flex-start}
+  @media (max-width:760px){ .canvas{grid-template-columns:1fr;justify-items:center} .pane{display:none} }
+
+  /* === 手机外框 === */
+  .phone{
+    position:relative;width:min(94vw,390px);aspect-ratio:390/844;border-radius:54px;overflow:hidden;flex:none;
+    background:var(--bg);
+    border:8px solid #0a0a0c;
+    box-shadow:0 30px 80px rgba(0,0,0,.45),inset 0 2px 0 rgba(255,255,255,.06);
+  }
+  .dynamic-island{
+    position:absolute;top:10px;left:50%;transform:translateX(-50%);
+    width:118px;height:34px;border-radius:20px;background:#0a0a0c;z-index:60;
+    box-shadow:inset 0 0 4px rgba(255,255,255,.18);
+  }
+  .statusbar{
+    position:absolute;top:0;left:0;right:0;height:52px;z-index:55;
+    display:flex;align-items:flex-end;justify-content:space-between;
+    padding:0 28px 6px 32px;pointer-events:none;font-size:14px;font-weight:500;letter-spacing:.02em;
+  }
+  .statusbar .sys{display:flex;gap:6px;align-items:center}
+
+  /* === 屏幕 === */
+  .screen{
+    position:absolute;inset:0;
+    padding:calc(64px + env(safe-area-inset-top,0px)) 22px 150px;
+    overflow-y:auto;overscroll-behavior:contain;
+    opacity:0;transform:translateY(8px) scale(.998);pointer-events:none;
+    transition:opacity .32s var(--ease),transform .38s var(--spring);
+    scrollbar-width:none;
+  }
+  .screen::-webkit-scrollbar{display:none}
+  .screen.active{opacity:1;transform:none;pointer-events:auto}
+
+  /* === 玻璃材质：内嵌高光 + 底部内阴影 + 外柔光 === */
+  .glass{
+    background:var(--glass-tint);
+    border:1px solid var(--glass-stroke);
+    border-radius:var(--r-lg);
+    backdrop-filter:blur(42px) saturate(170%);
+    -webkit-backdrop-filter:blur(42px) saturate(170%);
+    box-shadow:
+      inset 0 1px 0 var(--glass-hi),
+      inset 0 -1px 0 rgba(0,0,0,.18),
+      0 18px 50px var(--glass-shadow);
+  }
+  .dock{
+    background:var(--glass-tint);
+    border:1px solid var(--glass-stroke);
+    border-radius:36px;padding:8px;
+    backdrop-filter:blur(48px) saturate(180%);
+    -webkit-backdrop-filter:blur(48px) saturate(180%);
+    box-shadow:
+      inset 0 1px 0 var(--glass-hi),
+      0 20px 60px var(--glass-shadow);
+    overflow:hidden;
+    position:absolute;left:14px;right:14px;bottom:12px;z-index:40;
+  }
+  .dock-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+  .tab{
+    display:flex;flex-direction:column;align-items:center;gap:4px;
+    padding:10px 0 9px;border:0;border-radius:24px;
+    color:var(--muted);background:transparent;font:inherit;cursor:pointer;
+    transition:color .2s,background .22s var(--ease);
+  }
+  .tab i{display:block;font-style:normal;font-size:20px;transition:transform .3s var(--spring)}
+  .tab small{font-size:10px;font-weight:500;letter-spacing:.04em}
+  .tab:hover{color:var(--text)}
+  .tab.active{background:var(--accent);color:#fff;box-shadow:0 8px 20px rgba(31,109,255,.42)}
+  .tab.active i{transform:scale(1.08)}
+
+  /* === 页头 === */
+  .page-head{margin:8px 0 16px}
+  .page-head h2{
+    margin:0 0 8px;font-size:30px;font-weight:700;letter-spacing:-.025em;line-height:1.05;
+  }
+  .page-head p{margin:0;color:var(--muted);font-size:14px;line-height:1.55;max-width:34ch;letter-spacing:.005em}
+
+  /* === 连接 === */
+  .conn-pill{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:7px 14px;border-radius:var(--r-pill);
+    background:var(--glass-tint);border:1px solid var(--glass-stroke);
+    backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+    box-shadow:inset 0 1px 0 var(--glass-hi);
+    font-size:12px;letter-spacing:.02em;color:var(--muted);
+  }
+  .conn-pill .led{width:7px;height:7px;border-radius:50%;background:var(--muted-2)}
+  .conn-pill.on .led{background:var(--ok);box-shadow:0 0 0 3px rgba(31,191,111,.18)}
+
+  .dev-list{display:flex;flex-direction:column;gap:10px}
+  .dev{
+    position:relative;padding:16px;border-radius:var(--r-lg);
+    background:var(--surface-2);border:1px solid var(--line);
+    cursor:pointer;transition:background .2s,border-color .2s,transform .25s var(--spring);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
+  }
+  .dev:active{transform:scale(.99)}
+  .dev.sel{background:var(--accent-soft);border-color:var(--accent);box-shadow:0 0 0 1px var(--accent),inset 0 1px 0 rgba(255,255,255,.08)}
+  .dev-row{display:flex;align-items:center;gap:14px}
+  .dev-ic{
+    width:44px;height:44px;border-radius:14px;flex:none;
+    background:var(--surface-3);display:grid;place-items:center;
+    color:var(--accent);
+  }
+  .dev-glyph{width:20px;height:38px}
+  .dev-name{flex:1;min-width:0}
+  .dev-name b{font-size:14px;font-weight:600;letter-spacing:-.005em;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .dev-name small{display:block;color:var(--muted);font-size:11px;margin-top:3px;letter-spacing:.04em}
+  .dev-badge{font-size:11px;color:var(--muted);letter-spacing:.04em}
+  .dev.sel .dev-badge{color:var(--accent);font-weight:600}
+  .dev-foot{
+    display:flex;align-items:center;gap:14px;margin-top:14px;padding-top:12px;
+    border-top:1px solid var(--line);
+  }
+  .dev-foot .k{font-size:10px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;font-weight:600}
+  .dev-foot .v{font-size:13px;font-weight:600;letter-spacing:-.005em;display:flex;align-items:center;gap:6px}
+  .bars{display:inline-flex;gap:2px;align-items:flex-end;height:12px}
+  .bars i{width:3px;border-radius:1.5px;background:var(--muted-2)}
+  .bars i:nth-child(1){height:4px}.bars i:nth-child(2){height:7px}.bars i:nth-child(3){height:10px}.bars i:nth-child(4){height:12px}
+  .bars i.on{background:var(--accent)}
+
+  .scan-line{
+    display:flex;align-items:center;gap:10px;margin-top:14px;
+    color:var(--muted);font-size:12px;letter-spacing:.02em;
+  }
+  .scan-line .ring{
+    width:13px;height:13px;border-radius:50%;border:2px solid var(--line);
+    border-top-color:var(--accent);animation:spin 1s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* === 调色 === */
+  .color-stage{display:flex;flex-direction:column;gap:18px}
+  /* 中央色相盘（圆形 hue + 大三角饱和明度） */
+  .wheel{
+    position:relative;aspect-ratio:1;border-radius:50%;
+    background:
+      conic-gradient(from -90deg,#f00,#ff0 60deg,#0f0 120deg,#0ff 180deg,#00f 240deg,#f0f 300deg,#f00 360deg);
+    box-shadow:0 18px 48px rgba(0,0,0,.18),inset 0 0 0 1px var(--glass-stroke);
+    touch-action:none;
+  }
+  .wheel::before{ /* 中心白色压暗饱和 */
+    content:"";position:absolute;inset:0;border-radius:50%;
+    background:radial-gradient(circle at 50% 50%,rgba(255,255,255,.55),rgba(255,255,255,0) 60%);
+  }
+  .wheel::after{  /* 中心到边缘压明亮度 */
+    content:"";position:absolute;inset:0;border-radius:50%;
+    background:radial-gradient(circle at 50% 50%,transparent 18%,rgba(0,0,0,.55) 92%);
+  }
+  .wheel-knob{
+    position:absolute;width:22px;height:22px;border-radius:50%;
+    border:2.5px solid #fff;box-shadow:0 0 0 1.5px rgba(0,0,0,.4),0 4px 10px rgba(0,0,0,.35);
+    transform:translate(-50%,-50%);pointer-events:none;
+    transition:left .08s linear,top .08s linear,background .12s;
+  }
+  .hex-inline{
+    display:flex;align-items:stretch;width:100%;
+    background:var(--glass-tint);border:1px solid var(--glass-stroke);
+    border-radius:var(--r-md);backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);
+    box-shadow:inset 0 1px 0 var(--glass-hi);
+    overflow:hidden;
+  }
+  .hex-inline .swatch{width:46px;flex:none;border-right:1px solid var(--glass-stroke)}
+  .hex-inline input{
+    flex:1;background:transparent;color:var(--text);border:0;outline:0;
+    padding:14px 16px;font:inherit;font-size:14px;letter-spacing:.14em;
+    text-transform:uppercase;font-weight:500;
+  }
+  .hex-inline .prefix{padding:14px 6px 14px 16px;color:var(--muted);font-weight:500;letter-spacing:.14em;font-size:14px}
+
+  /* 9 灯效：单列 tile */
+  .fx-list{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+  .fx{
+    display:flex;align-items:center;gap:12px;padding:14px 16px;
+    background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-md);
+    color:var(--text);font:inherit;font-size:14px;letter-spacing:.005em;
+    cursor:pointer;text-align:left;width:100%;
+    transition:background .2s,border-color .2s,transform .18s var(--spring);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
+  }
+  .fx:active{transform:scale(.99)}
+  .fx i{display:block;font-style:normal;font-size:18px;color:var(--accent);width:24px;text-align:center;flex:none}
+  .fx b{flex:1;font-weight:500}
+  .fx small{color:var(--muted);font-size:11px;letter-spacing:.04em}
+  .fx.sel{background:var(--accent-soft);border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+
+  /* === 音乐 === */
+  .ring-orb{
+    position:relative;aspect-ratio:1;width:100%;
+    background:radial-gradient(circle at 50% 50%,var(--accent-soft),transparent 70%);
+    border-radius:var(--r-xl);
+    display:grid;place-items:center;
+  }
+  .ring-orb svg{width:74%;height:74%}
+  .ring-track{fill:none;stroke:var(--spec-track);stroke-width:6}
+  .ring-arc{transform:rotate(-90deg);transform-origin:center;transition:stroke-dashoffset .12s linear}
+  .ring-glow{stroke:var(--accent);filter:drop-shadow(0 0 10px rgba(31,109,255,.4))}
+  .core-core{fill:var(--accent);transition:r .22s var(--spring)}
+  .core-halo{fill:none;stroke:var(--accent);stroke-opacity:.22;transition:stroke-width .3s}
+
+  .stat-row{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:14px;
+    padding:14px 16px;
+    background:var(--surface-2);border:1px solid var(--line);
+    border-radius:var(--r-md);box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
+  }
+  .stat-row small{font-size:10px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;font-weight:600;display:block}
+  .stat-row b{font-size:17px;font-weight:700;letter-spacing:-.02em;display:block;margin-top:5px;font-variant-numeric:tabular-nums}
+
+  /* iOS 开关 */
+  .switch-row{
+    display:flex;align-items:center;justify-content:space-between;gap:14px;
+    padding:14px 16px;
+    background:var(--surface-2);border:1px solid var(--line);
+    border-radius:var(--r-md);box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
+  }
+  .switch-row .label b{font-size:14px;font-weight:600;display:block;letter-spacing:-.005em}
+  .switch-row .label small{font-size:11px;color:var(--muted);margin-top:3px;display:block;letter-spacing:.04em}
+  .switch{width:51px;height:31px;border-radius:var(--r-pill);border:0;background:rgba(126,141,166,.32);position:relative;cursor:pointer;flex:none;transition:background .2s}
+  .switch .knob{position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.3);transition:transform .35s var(--spring)}
+  .switch.on{background:var(--accent)}
+  .switch.on .knob{transform:translateX(20px)}
+
+  /* 4 模式 1×4 段按钮 */
+  .mode-pill{
+    display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:4px;
+    background:var(--glass-tint);border:1px solid var(--glass-stroke);border-radius:var(--r-pill);
+    backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+    box-shadow:inset 0 1px 0 var(--glass-hi);
+  }
+  .mode-pill button{
+    border:0;background:transparent;color:var(--muted);
+    padding:9px 0;font:inherit;font-size:12px;font-weight:600;letter-spacing:.04em;
+    border-radius:var(--r-pill);cursor:pointer;transition:color .2s,background .2s;
+  }
+  .mode-pill button.sel{background:var(--accent);color:#fff;box-shadow:0 6px 14px rgba(31,109,255,.32)}
+  .mode-pill button:hover:not(.sel){color:var(--text)}
+
+  /* 滑杆 */
+  .slider-row{padding:4px 0}
+  .slider-lbl{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:var(--muted);margin-bottom:10px;letter-spacing:.02em}
+  .slider-lbl b{color:var(--text);font-weight:600;font-variant-numeric:tabular-nums}
+  input[type=range]{width:100%;accent-color:var(--accent);height:22px;background:transparent}
+
+  /* === 设置 === */
+  .set-list{display:flex;flex-direction:column;gap:0}
+  .set-list > .set-row{border-bottom:1px solid var(--line)}
+  .set-list > .set-row:last-child{border-bottom:0}
+  .set-row{
+    display:flex;align-items:center;gap:12px;width:100%;padding:14px 16px;
+    background:transparent;border:0;color:var(--text);font:inherit;text-align:left;
+    cursor:pointer;transition:background .18s;
+  }
+  .set-row:hover{background:var(--accent-soft)}
+  .set-ic{
+    width:32px;height:32px;border-radius:10px;flex:none;
+    background:var(--surface-3);color:var(--accent);
+    display:grid;place-items:center;font-size:16px;
+  }
+  .set-row b{flex:1;font-size:14px;font-weight:500;letter-spacing:-.005em}
+  .set-row .val{color:var(--muted);font-size:12px;letter-spacing:.04em;font-variant-numeric:tabular-nums}
+  .set-row .chev{color:var(--muted-2);font-size:14px;letter-spacing:.02em}
+  .seg-pill{display:inline-flex;gap:3px;padding:3px;background:var(--surface-3);border-radius:var(--r-pill)}
+  .seg-pill button{
+    border:0;background:transparent;color:var(--muted);
+    padding:5px 11px;font:inherit;font-size:11px;border-radius:var(--r-pill);
+    cursor:pointer;font-weight:600;letter-spacing:.02em;transition:background .2s,color .2s;
+  }
+  .seg-pill button.sel{background:var(--accent);color:#fff}
+
+  /* 卡片遮罩 (版本 / 协议) */
+  .verdict-row{
+    display:grid;grid-template-columns:1fr 1fr;gap:10px;
+  }
+  .verdict{
+    background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-md);
+    padding:12px;
+  }
+  .verdict small{font-size:10px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;display:block;margin-bottom:6px;font-weight:600}
+  .verdict .hex{font-family:ui-monospace,SFMono-Regular,"JetBrains Mono",Menlo,monospace;font-size:11px;letter-spacing:.02em;line-height:1.5;word-break:break-all}
+  .matched{display:inline-flex;align-items:center;gap:7px;padding:8px 12px;border-radius:var(--r-pill);background:rgba(31,191,111,.14);color:var(--ok);font-size:12px;font-weight:600;letter-spacing:.02em}
+  .matched::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px rgba(31,191,111,.7)}
+
+  /* Toast */
+  .toast{
+    position:fixed;left:50%;bottom:30px;transform:translateX(-50%) translateY(18px);opacity:0;
+    background:var(--glass-tint);border:1px solid var(--glass-stroke);
+    backdrop-filter:blur(28px) saturate(170%);-webkit-backdrop-filter:blur(28px) saturate(170%);
+    box-shadow:inset 0 1px 0 var(--glass-hi),0 18px 50px rgba(0,0,0,.4);
+    border-radius:var(--r-pill);padding:11px 22px;font-size:13px;color:var(--text);
+    pointer-events:none;z-index:99;transition:opacity .28s,transform .36s var(--spring);
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* === 桌面侧栏：设计说明 + 站点地图 === */
+  .pane{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--r-xl);
+    padding:28px 28px 24px;
+    box-shadow:0 18px 48px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.04);
+  }
+  .pane h3{font-size:13px;font-weight:700;margin:0 0 6px;letter-spacing:-.005em}
+  .pane .lede{margin:0 0 18px;color:var(--muted);font-size:13px;line-height:1.6;letter-spacing:.005em;max-width:48ch}
+  .pane dl{display:grid;grid-template-columns:80px 1fr;gap:8px 16px;font-size:13px;line-height:1.55}
+  .pane dt{color:var(--muted);letter-spacing:.04em;font-weight:500}
+  .pane dd{margin:0;color:var(--text);font-variant-numeric:tabular-nums}
+  .pane hr{border:0;border-top:1px solid var(--line);margin:20px 0}
+  .map{display:flex;flex-direction:column;gap:10px;font-size:13px}
+  .map .lnk{
+    display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r-md);
+    background:var(--surface-2);border:1px solid var(--line);cursor:pointer;
+    transition:background .2s,border-color .2s;
+  }
+  .map .lnk:hover{background:var(--accent-soft);border-color:var(--accent)}
+  .map .lnk i{color:var(--accent);font-size:18px;width:22px;text-align:center;flex:none;font-style:normal}
+  .map .lnk b{flex:1;font-weight:500;letter-spacing:-.005em}
+  .map .lnk small{color:var(--muted);font-size:11px;letter-spacing:.04em}
+  .spec-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:8px}
+  .spec-grid > div{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-md);padding:12px}
+  .spec-grid small{font-size:10px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;font-weight:600;display:block}
+  .spec-grid b{font-size:20px;font-weight:700;letter-spacing:-.02em;display:block;margin-top:6px;font-variant-numeric:tabular-nums}
+
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none!important;animation:none!important}
+  }
+  @media (prefers-reduced-transparency:reduce){
+    .glass,.dock,.hex-inline,.seg-pill,.mode-pill,.switch-row,.stat-row,.dev,.fx,.verdict,.toast,.conn-pill,.seg,.pane{
+      backdrop-filter:none;-webkit-backdrop-filter:none;
+      background:var(--surface-2);
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- 像素 Logo（与品牌原 SVG 一致；此处以字符环境来对齐） -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+  <symbol id="logo-glyph" viewBox="0 0 360 672">
+    <g fill="var(--logo-fill)">
+      <rect x="144" y="48"  width="24" height="216"/><rect x="168" y="72"  width="24" height="72"/>
+      <rect x="120" y="120" width="24" height="120"/><rect x="168" y="192" width="24" height="120"/>
+      <rect x="192" y="264" width="24" height="96"/><rect x="120" y="288" width="24" height="72"/>
+      <rect x="216" y="288" width="24" height="168"/><rect x="96"  y="336" width="24" height="120"/>
+      <rect x="240" y="336" width="24" height="96"/><rect x="72"  y="360" width="24" height="48"/>
+      <rect x="120" y="408" width="24" height="72"/><rect x="192" y="408" width="24" height="72"/>
+      <rect x="48"  y="432" width="24" height="120"/><rect x="144" y="432" width="48" height="48"/>
+      <rect x="288" y="432" width="24" height="120"/><rect x="72"  y="480" width="24" height="96"/>
+      <rect x="264" y="480" width="24" height="96"/><rect x="96"  y="504" width="48" height="72"/>
+      <rect x="216" y="504" width="48" height="96"/><rect x="24"  y="528" width="24" height="24"/>
+      <rect x="312" y="528" width="24" height="24"/><rect x="144" y="552" width="24" height="72"/>
+      <rect x="192" y="552" width="24" height="72"/><rect x="120" y="576" width="24" height="24"/>
+      <rect x="168" y="576" width="24" height="72"/>
+    </g>
+  </symbol>
+</svg>
+
+<div class="toolbar">
+  <div class="brand">
+    <svg class="t-logo" viewBox="0 0 360 672"><use href="#logo-glyph"/></svg>
+    <div>
+      <b class="name">万兽之王 · 应援棒控制台</b>
+      <small class="sub">design-taste-frontend 重新设计</small>
+    </div>
+  </div>
+  <div class="seg" role="group" aria-label="主题切换">
+    <button type="button" data-theme="dark"  aria-pressed="true" onclick="setTheme('dark')">深色</button>
+    <button type="button" data-theme="light" aria-pressed="false" onclick="setTheme('light')">浅色</button>
+    <button type="button" data-theme="auto"  aria-pressed="false" onclick="setTheme('auto')">跟随系统</button>
+  </div>
+</div>
+
+<div class="canvas">
+  <!-- ================= 手机 ================= -->
+  <div class="phone" id="phone">
+    <div class="dynamic-island"></div>
+    <div class="statusbar">
+      <span>19:30</span>
+      <span class="sys"><span>●●●●</span><span>⌃</span><span>■</span></span>
+    </div>
+
+    <!-- 连接 -->
+    <section class="screen active" id="scr-connect">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">
+        <span class="conn-pill" id="connPill"><span class="led"></span><span id="pillText">未连接</span></span>
+        <button class="conn-pill" onclick="manualScan(this)" style="cursor:pointer;font:inherit;color:inherit"><span>↻</span><span>扫描</span></button>
+      </div>
+
+      <div class="page-head">
+        <h2>附近设备</h2>
+        <p>点选设备卡片即可配对连接，无需密码。</p>
+      </div>
+
+      <div class="dev-list">
+        <div class="dev sel" data-d="光剑 Pro · v2.4" onclick="pickDevice(this)">
+          <div class="dev-row">
+            <div class="dev-ic"><svg class="dev-glyph" viewBox="0 0 360 672"><use href="#logo-glyph"/></svg></div>
+            <div class="dev-name"><b>光剑 Pro</b><small>v2.4 · BABY-SWORD-01</small></div>
+            <span class="dev-badge">已配对</span>
+          </div>
+          <div class="dev-foot">
+            <div><div class="k">信号</div><div class="v"><span class="bars"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span>−52 dBm</div></div>
+            <div style="margin-left:auto"><div class="k">电量</div><div class="v">83%</div></div>
+          </div>
+        </div>
+
+        <div class="dev" data-d="应援棒 X" onclick="pickDevice(this)">
+          <div class="dev-row">
+            <div class="dev-ic"><svg class="dev-glyph" viewBox="0 0 360 672"><use href="#logo-glyph"/></svg></div>
+            <div class="dev-name"><b>应援棒 X</b><small>v2.4 · LIGHT-STICK-A3</small></div>
+            <span class="dev-badge">未配对</span>
+          </div>
+          <div class="dev-foot">
+            <div><div class="k">信号</div><div class="v"><span class="bars"><i class="on"></i><i class="on"></i><i></i><i></i></span>−68 dBm</div></div>
+            <div style="margin-left:auto"><div class="k">电量</div><div class="v">47%</div></div>
+          </div>
+        </div>
+
+        <div class="dev" data-d="演出宝宝剑" onclick="pickDevice(this)">
+          <div class="dev-row">
+            <div class="dev-ic"><svg class="dev-glyph" viewBox="0 0 360 672"><use href="#logo-glyph"/></svg></div>
+            <div class="dev-name"><b>演出宝宝剑</b><small>v1.8 · KIDS-LIGHT-7F</small></div>
+            <span class="dev-badge">未配对</span>
+          </div>
+          <div class="dev-foot">
+            <div><div class="k">信号</div><div class="v"><span class="bars"><i class="on"></i><i class="on"></i><i></i><i></i></span>−71 dBm</div></div>
+            <div style="margin-left:auto"><div class="k">电量</div><div class="v">12%</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="scan-line" id="scanLine"><span class="ring"></span>正在扫描附近的应援棒设备</div>
+    </section>
+
+    <!-- 调色 -->
+    <section class="screen" id="scr-color">
+      <div class="page-head">
+        <h2>调色盘</h2>
+        <p>沿圆环滑动选择颜色，hex 即时同步。</p>
+      </div>
+
+      <div class="color-stage">
+        <div class="wheel" id="wheel">
+          <div class="wheel-knob" id="wheelKnob" style="left:78%;top:24%;background:#1f6dff"></div>
+        </div>
+        <div class="hex-inline">
+          <div class="swatch" id="swatch" style="background:#1f6dff"></div>
+          <span class="prefix">HEX</span>
+          <input id="hexInput" type="text" value="1F6DFF" maxlength="6" spellcheck="false" aria-label="颜色十六进制值">
+        </div>
+      </div>
+
+      <div class="slider-row" style="margin-top:18px">
+        <div class="slider-lbl"><span>亮度</span><b id="brightnessVal">80%</b></div>
+        <input type="range" min="0" max="100" value="80" oninput="document.getElementById('brightnessVal').textContent=this.value+'%'">
+      </div>
+
+      <div style="margin-top:20px">
+        <div class="fx-list" id="fxList">
+          <button class="fx sel" type="button" data-fx="常亮"  onclick="pickFx(this)"><i>◉</i><b>常亮</b><small>078</small></button>
+          <button class="fx" type="button" data-fx="呼吸"  onclick="pickFx(this)"><i>∿</i><b>呼吸</b><small>6 sec</small></button>
+          <button class="fx" type="button" data-fx="快闪"  onclick="pickFx(this)"><i>⚡</i><b>快闪</b><small>160 ms</small></button>
+          <button class="fx" type="button" data-fx="眨眼"  onclick="pickFx(this)"><i>◐</i><b>眨眼</b><small>2 sec</small></button>
+          <button class="fx" type="button" data-fx="聚会"  onclick="pickFx(this)"><i>✺</i><b>聚会</b><small> random</small></button>
+          <button class="fx" type="button" data-fx="彩虹"  onclick="pickFx(this)"><i>⌒</i><b>彩虹</b><small>15 hue rot</small></button>
+          <button class="fx" type="button" data-fx="星空"  onclick="pickFx(this)"><i>✦</i><b>星空</b><small>stochastic</small></button>
+          <button class="fx" type="button" data-fx="随机色" onclick="pickFx(this)"><i>⚄</i><b>随机色</b><small>dice</small></button>
+          <button class="fx" type="button" data-fx="黑屏"  onclick="pickFx(this)"><i>●</i><b>黑屏</b><small>power off</small></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 音乐 -->
+    <section class="screen" id="scr-music">
+      <div class="page-head">
+        <h2>音乐调光</h2>
+        <p>应援棒跟随机内音量与节拍律动。</p>
+      </div>
+
+      <div class="ring-orb">
+        <svg viewBox="0 0 140 140" aria-label="节拍环形指示器">
+          <circle class="ring-track" cx="70" cy="70" r="58"/>
+          <circle id="ringArc" class="ring-arc ring-glow" cx="70" cy="70" r="58"
+                  stroke-dasharray="364.4" stroke-dashoffset="290"/>
+          <circle id="ringCore"  class="core-halo" cx="70" cy="70" r="34" stroke-width="2"/>
+          <circle id="ringCoreFill" class="core-core" cx="70" cy="70" r="26"/>
+          <circle id="ringCoreInner" class="core-core" cx="70" cy="70" r="14" fill="var(--text)" fill-opacity=".95"/>
+        </svg>
+      </div>
+
+      <div class="switch-row" style="margin-top:14px">
+        <div class="label"><b>音乐响应</b><small>开启后跟随环境音量</small></div>
+        <button class="switch on" id="musicSwitch" type="button" role="switch" aria-checked="true" onclick="musicToggle(this)"><span class="knob"></span></button>
+      </div>
+
+      <div class="slider-row" style="margin-top:18px">
+        <div class="slider-lbl"><span>灵敏度</span><b id="sensVal">60%</b></div>
+        <input type="range" min="0" max="100" value="60" oninput="document.getElementById('sensVal').textContent=this.value+'%'">
+      </div>
+
+      <div style="margin-top:18px">
+        <div class="mode-pill" role="group" aria-label="律动模式">
+          <button class="sel" onclick="pickMode(this)" data-mode="单色">单色</button>
+          <button onclick="pickMode(this)" data-mode="七彩">七彩</button>
+          <button onclick="pickMode(this)" data-mode="强烈">强烈</button>
+          <button onclick="pickMode(this)" data-mode="柔和">柔和</button>
+        </div>
+      </div>
+
+      <div class="stat-row" style="margin-top:14px">
+        <div><small>音量</small><b id="volVal">0.42</b></div>
+        <div><small>低频</small><b id="bassVal">0.31</b></div>
+        <div><small>高频</small><b id="trebleVal">0.18</b></div>
+      </div>
+    </section>
+
+    <!-- 设置 -->
+    <section class="screen" id="scr-settings">
+      <div class="page-head">
+        <h2>设置</h2>
+        <p>管理设备、灯光、音频与系统主题。</p>
+      </div>
+
+      <div class="glass" style="padding:0;overflow:hidden">
+        <div class="set-list">
+          <div class="set-row">
+            <div class="set-ic">◐</div>
+            <b>显示模式</b>
+            <span class="seg-pill" role="group" aria-label="主题模式">
+              <button class="sel" onclick="pickThemeBtn(this,'auto')">跟随</button>
+              <button onclick="pickThemeBtn(this,'light')">浅色</button>
+              <button onclick="pickThemeBtn(this,'dark')">深色</button>
+            </span>
+          </div>
+          <div class="set-row"><div class="set-ic">⌬</div><b>已连接设备</b><span class="val">光剑 Pro</span><span class="chev">›</span></div>
+          <div class="set-row"><div class="set-ic" style="color:var(--err)">✕</div><b style="color:var(--err)">清除设备记录</b><span class="val">断开并遗忘</span><span class="chev">›</span></div>
+        </div>
+      </div>
+
+      <div class="glass" style="padding:0;overflow:hidden;margin-top:14px">
+        <div class="set-list">
+          <div class="set-row"><div class="set-ic">☀</div><b>默认亮度</b><span class="val" id="defBriVal">80%</span><input type="range" min="0" max="100" value="80" style="width:120px;accent-color:var(--accent)" oninput="document.getElementById('defBriVal').textContent=this.value+'%'"></div>
+          <div class="set-row"><div class="set-ic">⏱</div><b>默认效果速度</b><span class="val">50%</span><span class="chev">›</span></div>
+          <div class="set-row"><div class="set-ic">⏻</div><b>默认开机效果</b><span class="val">常亮</span><span class="chev">›</span></div>
+          <div class="set-row"><div class="set-ic">⚙</div><b>灵敏度默认</b><span class="val" id="defSensVal">60%</span><input type="range" min="0" max="100" value="60" style="width:120px;accent-color:var(--accent)" oninput="document.getElementById('defSensVal').textContent=this.value+'%'"></div>
+          <div class="set-row"><div class="set-ic">♪</div><b>音乐响应默认</b><span class="seg-pill"><button class="sel">开</button><button>关</button></span></div>
+          <div class="set-row"><div class="set-ic">⌘</div><b>律动模式默认</b><span class="seg-pill"><button>单色</button><button class="sel">七彩</button><button>强烈</button><button>柔和</button></span></div>
+        </div>
+      </div>
+
+      <div class="glass" style="padding:0;overflow:hidden;margin-top:14px">
+        <div class="set-list">
+          <div class="set-row" onclick="goMore('tips')"><div class="set-ic">⚠</div><b>温馨提示</b><span class="val">阅读安全提示</span><span class="chev">›</span></div>
+          <div class="set-row" onclick="goMore('seat')"><div class="set-ic">⌖</div><b>座位绑定</b><span class="val">内场前排 · A12</span><span class="chev">›</span></div>
+          <div class="set-row" onclick="goMore('proto')"><div class="set-ic">✓</div><b>协议验证</b><span class="val">61 项 · 全绿</span><span class="chev">›</span></div>
+          <div class="set-row" onclick="goMore('about')"><div class="set-ic">ⓘ</div><b>关于本应用</b><span class="val">MIT</span><span class="chev">›</span></div>
+        </div>
+      </div>
+
+      <div style="text-align:center;color:var(--muted-2);font-size:11px;line-height:1.6;margin-top:22px;letter-spacing:.04em">万兽之王应援棒控制 · 字节级协议对齐</div>
+    </section>
+
+    <!-- 侧页：温馨提示 -->
+    <section class="screen" id="scr-tips">
+      <div class="page-head">
+        <h2>温馨提示</h2>
+        <p>安全使用应援棒，演出观感更佳。</p>
+      </div>
+      <div class="glass" style="padding:6px 0">
+        <div class="set-row"><div class="set-ic">⚠</div><b>请勿直视强光</b><span class="val">防止眼睛不适</span></div>
+        <div class="set-row"><div class="set-ic">⌖</div><b>儿童需家长陪同</b><span class="val">含小零件</span></div>
+        <div class="set-row"><div class="set-ic">▮</div><b>电量低于 20%</b><span class="val">及时充电</span></div>
+        <div class="set-row"><div class="set-ic">☂</div><b>防摔防水</b><span class="val">避免浸水</span></div>
+        <div class="set-row"><div class="set-ic">⏻</div><b>演出结束关机</b><span class="val">长按 2 秒</span></div>
+        <div class="set-row"><div class="set-ic">⚒</div><b>请勿自行改装</b><span class="val">联系客服</span></div>
+      </div>
+    </section>
+
+    <!-- 侧页：座位绑定 -->
+    <section class="screen" id="scr-seat">
+      <div class="page-head">
+        <h2>座位绑定</h2>
+        <p>绑定区域与座位号，灯光随现场联动。</p>
+      </div>
+      <div class="glass" style="padding:0;overflow:hidden">
+        <div class="set-list">
+          <div class="set-row"><div class="set-ic">⌖</div><b>演出区域</b><span class="val">内场前排</span><span class="chev">›</span></div>
+          <div class="set-row"><div class="set-ic">#</div><b>座位号</b><span class="val">A12</span><span class="chev">›</span></div>
+          <div class="set-row"><div class="set-ic">⌖</div><b>重新定位</b><span class="val">蓝牙基站三角定位</span><span class="chev">›</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 侧页：协议验证 -->
+    <section class="screen" id="scr-proto">
+      <div class="page-head">
+        <h2>协议验证</h2>
+        <p>Dart → Rust → 协议层端到端比对。</p>
+      </div>
+      <div class="glass" style="padding:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+          <b style="font-size:14px;letter-spacing:-.005em">LIGHT_FLASH_HEX 比对</b>
+          <span class="matched" onclick="toast('重新执行端到端校验')">匹配</span>
+        </div>
+        <div class="verdict-row">
+          <div class="verdict"><small>重建</small><div class="hex" id="buildHex">02000000100004ff020c06104c6a5e52</div></div>
+          <div class="verdict"><small>金标准</small><div class="hex" id="goldenHex">02000000100004ff020c06104c6a5e52</div></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)">
+          <small style="color:var(--ok);font-weight:600;font-size:12px">链路字节级一致</small>
+          <small style="color:var(--muted);font-size:11px;letter-spacing:.04em">CRC32 · IEEE 802.3</small>
+        </div>
+      </div>
+      <div class="glass" style="padding:14px;margin-top:12px">
+        <div style="font-size:13px;font-weight:600;margin-bottom:10px;letter-spacing:-.005em">链路指标</div>
+        <div class="spec-grid">
+          <div><small>测试项</small><b>61</b></div>
+          <div><small>BLE 服务</small><b>FFE0</b></div>
+          <div><small>写特征</small><b>FFE1</b></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 侧页：关于 -->
+    <section class="screen" id="scr-about">
+      <div class="page-head">
+        <h2>关于</h2>
+        <p>万兽之王应援棒控制，端到端内核来自反编译小程序。</p>
+      </div>
+      <div class="glass" style="padding:22px;text-align:center">
+        <svg style="width:38px;height:72px;margin:0 auto 14px;display:block" viewBox="0 0 360 672"><use href="#logo-glyph"/></svg>
+        <div style="font-size:20px;font-weight:700;letter-spacing:-.02em;margin-bottom:4px">万兽之王</div>
+        <div style="color:var(--muted);font-size:12px;letter-spacing:.04em">应援棒 · 演出宝宝剑 · 控制 App</div>
+        <div class="spec-grid" style="margin-top:18px;text-align:left">
+          <div><small>协议</small><b>9 灯效</b></div>
+          <div><small>许可</small><b>MIT</b></div>
+          <div><small>框架</small><b>Flutter</b></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Dock -->
+    <div class="dock">
+      <div class="dock-tabs" role="tablist" aria-label="主界面导航">
+        <button class="tab active" type="button" role="tab" data-tab="连接" onclick="go('connect','连接')"><i>⌬</i><small>连接</small></button>
+        <button class="tab" type="button" role="tab" data-tab="调色" onclick="go('color','调色')"><i>◐</i><small>调色</small></button>
+        <button class="tab" type="button" role="tab" data-tab="音乐" onclick="go('music','音乐')"><i>♪</i><small>音乐</small></button>
+        <button class="tab" type="button" role="tab" data-tab="设置" onclick="go('settings','设置')"><i>⚙</i><small>设置</small></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 桌面侧栏（站点地图 + 设计读法） ================= -->
+  <aside class="pane">
+    <svg style="width:24px;height:46px;display:block;margin-bottom:12px" viewBox="0 0 360 672"><use href="#logo-glyph"/></svg>
+    <h3 style="font-size:18px">万兽之王控制台 · 站点地图</h3>
+    <p class="lede">悬浮玻璃 Dock + 圆形色相盘 + 4 律动段按钮 + 字节级协议验证。Liquid Glass 在 web 端的诚实近似（仅靠 backdrop-filter），并非 Apple 官方 Liquid Glass。</p>
+
+    <dl>
+      <dt>单强调色</dt><dd>#1F6DFF · 锁定全站</dd>
+      <dt>字体栈</dt><dd>SF Pro / PingFang</dd>
+      <dt>节奏</dt><dd>8 px 基准 · 12 行高</dd>
+      <dt>密度</dt><dd>4 · 标准 App</dd>
+      <dt>运动</dt><dd>4 · 抑制 spring</dd>
+      <dt>变体</dt><dd>6 · 中心 + 圆形偏移</dd>
+    </dl>
+
+    <hr>
+
+    <h3>路由</h3>
+    <div class="map">
+      <div class="lnk" onclick="go('connect','连接')"><i>⌬</i><b>连接</b><small>3 设备</small></div>
+      <div class="lnk" onclick="go('color','调色')"><i>◐</i><b>调色</b><small>9 灯效</small></div>
+      <div class="lnk" onclick="go('music','音乐')"><i>♪</i><b>音乐</b><small>4 模式</small></div>
+      <div class="lnk" onclick="go('settings','设置')"><i>⚙</i><b>设置</b><small>13 行</small></div>
+      <div class="lnk" onclick="go('tips','设置')"><i>⚠</i><b>温馨提示</b><small>6 行</small></div>
+      <div class="lnk" onclick="go('seat','设置')"><i>⌖</i><b>座位绑定</b><small>3 行</small></div>
+      <div class="lnk" onclick="go('proto','设置')"><i>✓</i><b>协议验证</b><small>61 测试</small></div>
+      <div class="lnk" onclick="go('about','设置')"><i>ⓘ</i><b>关于本应用</b><small>MIT</small></div>
+    </div>
+  </aside>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+  // ========== 主题 ==========
+  const root = document.documentElement;
+  const saved = localStorage.getItem('ws-theme2') || 'auto';
+  const prefersDark = matchMedia('(prefers-color-scheme: dark)').matches;
+  function applyTheme(mode){
+    const actual = mode === 'auto' ? (prefersDark ? 'dark' : 'light') : mode;
+    root.dataset.theme = actual;
+    document.querySelectorAll('.seg button').forEach(b =>
+      b.setAttribute('aria-pressed', b.dataset.theme === mode ? 'true' : 'false'));
+  }
+  function setTheme(mode){
+    localStorage.setItem('ws-theme2', mode); applyTheme(mode);
+  }
+  applyTheme(saved);
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    if ((localStorage.getItem('ws-theme2') || 'auto') === 'auto') applyTheme('auto');
+  });
+  function pickThemeBtn(btn, mode){
+    const grp = btn.parentElement; grp.querySelectorAll('button').forEach(b=>b.classList.remove('sel'));
+    btn.classList.add('sel'); setTheme(mode); toast('主题：' + (mode==='auto'?'跟随系统':mode==='light'?'浅色':'深色'));
+  }
+
+  // ========== Toast ==========
+  const toastEl = document.getElementById('toast');
+  let toastTimer;
+  function toast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove('show'), 1600);
+  }
+
+  // ========== 屏幕切换 ==========
+  function go(screen, tab){
+    document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === 'scr-' + screen));
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+    const active = document.querySelector('.screen.active');
+    if (active) active.scrollTop = 0;
+  }
+  function goMore(screen){ go(screen, '设置'); toast('已打开：' + ({tips:'温馨提示',seat:'座位绑定',proto:'协议验证',about:'关于本应用'}[screen] || screen)); }
+
+  // ========== 连接：手动 scan + 选中 ==========
+  function manualScan(btn){
+    toast('扫描已启动'); btn.setAttribute('disabled','true');
+    setTimeout(()=> btn.removeAttribute('disabled'), 1500);
+  }
+  const connPill = document.getElementById('connPill');
+  const pillText = document.getElementById('pillText');
+  function pickDevice(card){
+    document.querySelectorAll('.dev').forEach(c => c.classList.remove('sel'));
+    card.classList.add('sel');
+    connPill.classList.add('on');
+    pillText.textContent = '已连接 ' + card.dataset.d;
+    toast('已连接 ' + card.dataset.d);
+  }
+
+  // ========== 调色：圆形 hue/明度 ==========
+  const wheel    = document.getElementById('wheel');
+  const wheelKnob= document.getElementById('wheelKnob');
+  const swatch   = document.getElementById('swatch');
+  const hexInput = document.getElementById('hexInput');
+  let curHue=216, curSat=1, curVal=0.78;
+
+  function hsvToRgb(h, s, v){
+    const c=v*s, x=c*(1-Math.abs((h/60)%2-1)), m=v-c;
+    let r,g,b;
+    if(h<60){r=c;g=x;b=0}else if(h<120){r=x;g=c;b=0}else if(h<180){r=0;g=c;b=x}
+    else if(h<240){r=0;g=x;b=c}else if(h<300){r=x;g=0;b=c}else{r=c;g=0;b=x}
+    return [Math.round((r+m)*255),Math.round((g+m)*255),Math.round((b+m)*255)];
+  }
+  function rgbToHsv(r,g,b){r/=255;g/=255;b/=255;const mx=Math.max(r,g,b),mn=Math.min(r,g,b),d=mx-mn;let h=0;if(d){if(mx===r)h=((g-b)/d)%6;else if(mx===g)h=(b-r)/d+2;else h=(r-g)/d+4;h*=60;if(h<0)h+=360;}return[h,mx===0?0:d/mx,mx];}
+  function rgbToHex(r,g,b){return[r,g,b].map(v=>v.toString(16).padStart(2,'0').toUpperCase()).join('')}
+  function hexToRgb(hex){const n=parseInt(hex,16);return[(n>>16)&255,(n>>8)&255,n&255]}
+
+  function pickFromWheel(clientX, clientY){
+    const rect = wheel.getBoundingClientRect();
+    const cx = rect.left + rect.width/2, cy = rect.top + rect.height/2;
+    const dx = clientX - cx, dy = clientY - cy;
+    const dist = Math.min(Math.sqrt(dx*dx + dy*dy), rect.width/2);
+    const off = dist / (rect.width/2);
+    const angle = (Math.atan2(dy, dx) * 180/Math.PI + 90 + 360) % 360; /* 0° 顶端开始 */
+    curHue = angle;
+    curVal = 1 - off*0.5;                /* 中心偏亮，边缘偏暗 */
+    curSat = Math.min(1, 0.4 + off*1.2); /* 中心去饱和以让文本可读 */
+    wheelKnob.style.left = (50 + (dist/ (rect.width/2))*50 * Math.cos((angle-90)*Math.PI/180)) + '%';
+    wheelKnob.style.top  = (50 + (dist/ (rect.width/2))*50 * Math.sin((angle-90)*Math.PI/180)) + '%';
+    applyHex(rgbToHex(...hsvToRgb(curHue, curSat, curVal)));
+  }
+  function dragWheel(e){
+    try{ wheel.setPointerCapture(e.pointerId); }catch(_){}
+    pickFromWheel(e.clientX, e.clientY);
+    const move = ev => pickFromWheel(ev.clientX, ev.clientY);
+    const up = () => { wheel.removeEventListener('pointermove', move); wheel.removeEventListener('pointerup', up); wheel.removeEventListener('pointercancel', up); };
+    wheel.addEventListener('pointermove', move);
+    wheel.addEventListener('pointerup', up);
+    wheel.addEventListener('pointercancel', up);
+  }
+  wheel.addEventListener('pointerdown', dragWheel);
+
+  function applyHex(hex){
+    hex = hex.replace('#','').toUpperCase();
+    if(!/^[0-9A-F]{6}$/.test(hex)) return;
+    hexInput.value = hex;
+    swatch.style.background = '#' + hex;
+    wheelKnob.style.background = '#' + hex;
+  }
+  function syncFromHex(hex){
+    hex = hex.replace('#','').toUpperCase();
+    if(!/^[0-9A-F]{6}$/.test(hex)) return;
+    applyHex(hex);
+    const [r,g,b] = hexToRgb(hex);
+    const [h,s,v] = rgbToHsv(r,g,b);
+    curHue=h; curSat=s; curVal=v;
+    wheelKnob.style.left = (50 + 50*(s*0.6)*Math.cos((h-90)*Math.PI/180)) + '%';
+    wheelKnob.style.top  = (50 + 50*(s*0.6)*Math.sin((h-90)*Math.PI/180)) + '%';
+  }
+  hexInput.addEventListener('input', () => {
+    let v = hexInput.value.replace(/[^0-9a-fA-F]/g,'').toUpperCase().slice(0,6);
+    hexInput.value = v; if(v.length === 6) syncFromHex(v);
+  });
+  syncFromHex('1F6DFF');
+
+  function pickFx(btn){
+    document.querySelectorAll('#fxList .fx').forEach(b=>b.classList.remove('sel'));
+    btn.classList.add('sel');
+    toast('已应用：' + btn.dataset.fx + ' #' + hexInput.value);
+  }
+
+  // ========== 音乐：节拍环 + 仪表 ==========
+  const ringArc = document.getElementById('ringArc');
+  const ringCore = document.getElementById('ringCore');
+  const ringCoreFill = document.getElementById('ringCoreFill');
+  const ringCoreInner = document.getElementById('ringCoreInner');
+  const musicSwitch = document.getElementById('musicSwitch');
+  let orbActive = false, orbRAF;
+  const RING_CIRC = 2 * Math.PI * 58;
+
+  function orbLoop(t){
+    const on = musicSwitch.classList.contains('on');
+    const base = on ? 0.42 : 0.10;
+    const waveA = Math.sin(t*0.0032) * 0.18;
+    const waveB = Math.sin(t*0.0068 + 0.7) * 0.10;
+    const vol = base + waveA + waveB + (on ? 0.10*Math.sin(t*0.012) : 0);
+    const bass = (vol + 0.15*Math.sin(t*0.0021)) * (on ? 1.1 : 0.6);
+    const treble = (vol*0.5 + 0.1*Math.sin(t*0.013)) * (on ? 1.0 : 0.4);
+
+    const off = RING_CIRC * (1 - Math.min(vol*1.4, 1));
+    ringArc.setAttribute('stroke-dashoffset', off);
+    ringCoreFill.setAttribute('r', 22 + 14*Math.min(bass,1));
+    ringCore.setAttribute('stroke-width', 2 + 3*Math.min(treble,1));
+    ringCoreInner.setAttribute('r', 10 + 4*Math.min(treble,1));
+
+    document.getElementById('volVal').textContent = vol.toFixed(2);
+    document.getElementById('bassVal').textContent = bass.toFixed(2);
+    document.getElementById('trebleVal').textContent = treble.toFixed(2);
+
+    if(orbActive) orbRAF = requestAnimationFrame(orbLoop);
+  }
+  const scrMusic = document.getElementById('scr-music');
+  const mo = new MutationObserver(() => {
+    if(scrMusic.classList.contains('active')){
+      if(!orbActive){ orbActive = true; orbLoop(performance.now()); }
+    } else { orbActive = false; cancelAnimationFrame(orbRAF); }
+  });
+  mo.observe(scrMusic, {attributes:true, attributeFilter:['class']});
+
+  function musicToggle(sw){
+    const on = sw.classList.toggle('on');
+    sw.setAttribute('aria-checked', on ? 'true' : 'false');
+    toast(on ? '音乐响应已开启' : '音乐响应已关闭');
+  }
+  function pickMode(btn){
+    btn.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('sel'));
+    btn.classList.add('sel');
+    toast('律动模式：' + btn.dataset.mode);
+  }
+</script>
+</body>
+</html>

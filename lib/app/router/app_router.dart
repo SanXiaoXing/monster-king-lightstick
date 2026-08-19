@@ -6,8 +6,30 @@ import 'package:flutter/material.dart';
 class AppRouter {
   AppRouter._();
 
-  /// 通用推页入口。
+  /// 通用推页入口：与主页 Tab 切换同源的「淡入 + 朝推入方向微移」转场。
+  /// 词汇表对齐 home_page._buildPage：Curves.easeOutCubic、320ms、Offset(±0.06, 0)。
+  /// 减少动态（disableAnimations）时瞬时切换，不做任何过渡。
   static Route<T> page<T>(Widget page) {
-    return MaterialPageRoute<T>(builder: (_) => page);
+    return PageRouteBuilder<T>(
+      pageBuilder: (_, _, _) => page,
+      transitionDuration: const Duration(milliseconds: 320),
+      reverseTransitionDuration: const Duration(milliseconds: 200),
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        final reduceMotion =
+            MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+        if (reduceMotion) return child;
+        final curved =
+            CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+        return FadeTransition(
+          opacity: curved,
+          child: SlideTransition(
+            position:
+                Tween<Offset>(begin: const Offset(0.06, 0), end: Offset.zero)
+                    .animate(curved),
+            child: child,
+          ),
+        );
+      },
+    );
   }
 }

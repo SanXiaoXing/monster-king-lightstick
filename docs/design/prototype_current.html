@@ -1,0 +1,927 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>万兽之王 · 应援棒控制器（当前界面 HTML 原型）</title>
+<!--
+  当前界面 HTML 原型：100% 复刻 Flutter 上现役的 Liquid Glass UI 表面。
+  - 4 屏：连接、调色、音乐、设置（悬浮胶囊 Dock）
+  - 9 种灯光效果 + 4 种律动模式 + 5 个默认设置项
+  - 侧入口：温馨提示、协议验证、座位绑定、关于
+  - 浅/深双主题 + 跟随系统
+  - 全屏完整设备卡片列表（不截断"more"）
+  - 不涉及 design-taste-frontend 二次设计
+-->
+<style>
+  :root{
+    --accent:#0a84ff;
+    --accent-soft:rgba(10,132,255,.16);
+    --ok:#34c759; --warn:#ff9f0a; --err:#ff453a;
+    --r-xl:26px; --r-lg:22px; --r-md:16px; --r-sm:12px; --r-pill:999px;
+    --ease:cubic-bezier(.16,1,.3,1);
+    --spring:cubic-bezier(.34,1.56,.64,1);
+  }
+  :root[data-theme="dark"]{
+    --bg:#08080b; --bg2:#111318;
+    --text:#f5f5f7; --muted:#8e8e93; --line:rgba(245,245,247,.1); --logo-fill:#f5f5f7;
+    --glass-bg:rgba(255,255,255,.08); --glass-line:rgba(255,255,255,.12); --glass-blur:blur(40px);
+    --card-bg:rgba(255,255,255,.05); --card-line:rgba(255,255,255,.1); --card-blur:blur(30px);
+    --chip-bg:rgba(255,255,255,.05); --chip-blur:blur(20px);
+    --dock-shadow:rgba(0,0,0,.55); --spec-track:rgba(245,245,247,.05);
+    --safe-top:env(safe-area-inset-top,0px);
+  }
+  :root[data-theme="light"]{
+    --bg:#eef2f8; --bg2:#e2e8f1;
+    --text:#0a0f1a; --muted:#54627a; --line:rgba(10,15,26,.1); --logo-fill:#0a0f1a;
+    --glass-bg:rgba(255,255,255,.55); --glass-line:rgba(255,255,255,.7); --glass-blur:blur(40px);
+    --card-bg:rgba(255,255,255,.5); --card-line:rgba(255,255,255,.6); --card-blur:blur(30px);
+    --chip-bg:rgba(255,255,255,.4); --chip-blur:blur(20px);
+    --dock-shadow:rgba(29,60,94,.2); --spec-track:rgba(10,15,26,.06);
+    --safe-top:env(safe-area-inset-top,0px);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","PingFang SC","Microsoft YaHei",sans-serif;
+    background:
+      radial-gradient(760px 480px at 82% -8%, var(--bg2), transparent 62%),
+      radial-gradient(620px 420px at -10% 30%, var(--bg2), transparent 58%),
+      var(--bg);
+    display:flex;flex-direction:column;align-items:center;
+    padding:24px 16px 40px;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* -------------- 顶部说明栏 -------------- */
+  .toolbar{width:min(430px,100%);display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+  .toolbar-left{display:flex;align-items:center;gap:10px;min-width:0}
+  .toolbar .t-logo{width:14px;height:26px;flex:none}
+  .toolbar b{font-size:14px;font-weight:600;letter-spacing:.2px;display:block}
+  .toolbar small{display:block;color:var(--muted);font-size:11px;letter-spacing:.2px;margin-top:2px}
+  .seg{display:flex;flex:none;border:1px solid var(--line);border-radius:var(--r-pill);overflow:hidden;background:var(--chip-bg);backdrop-filter:var(--chip-blur);-webkit-backdrop-filter:var(--chip-blur)}
+  .seg button{border:0;background:transparent;color:var(--muted);padding:7px 14px;font-size:12px;cursor:pointer;font:inherit}
+  .seg button[aria-pressed="true"]{background:var(--accent);color:#fff;font-weight:600}
+  .seg button:hover{color:var(--text)}
+
+  /* -------------- 手机外框 -------------- */
+  .phone{position:relative;width:min(92vw,390px);aspect-ratio:390/844;border-radius:52px;overflow:hidden;flex:none;background:var(--bg);border:8px solid #000;box-shadow:0 40px 90px rgba(0,0,0,.45),inset 0 2px 0 rgba(255,255,255,.06)}
+  .dynamic-island{position:absolute;top:10px;left:50%;transform:translateX(-50%);width:118px;height:34px;border-radius:20px;background:#000;z-index:60;box-shadow:inset 0 0 4px rgba(255,255,255,.25)}
+  .statusbar{position:absolute;top:0;left:0;right:0;height:52px;z-index:55;display:flex;align-items:flex-end;justify-content:space-between;padding:0 26px 6px 30px;pointer-events:none}
+  .statusbar .time{font-size:15px;font-weight:600;letter-spacing:.3px}
+  .statusbar .sys{display:flex;gap:6px;align-items:center;font-size:14px}
+
+  /* -------------- 屏幕容器 -------------- */
+  .screen{position:absolute;inset:0;padding:calc(64px + var(--safe-top)) 18px 150px;overflow-y:auto;overscroll-behavior:contain;opacity:0;transform:translateY(8px) scale(.996);pointer-events:none;transition:opacity .3s var(--ease),transform .34s var(--spring);scrollbar-width:none}
+  .screen::-webkit-scrollbar{display:none}
+  .screen.active{opacity:1;transform:none;pointer-events:auto}
+
+  /* -------------- 通用玻璃组件 -------------- */
+  .glass-card{background:var(--card-bg);backdrop-filter:var(--card-blur);-webkit-backdrop-filter:var(--card-blur);border:1px solid var(--card-line);border-radius:var(--r-lg);box-shadow:0 8px 24px rgba(0,0,0,.12)}
+  .glass{background:var(--glass-bg);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);border:1px solid var(--glass-line);border-radius:var(--r-lg);box-shadow:0 14px 40px var(--dock-shadow)}
+  .conn-pill{display:inline-flex;align-items:center;gap:7px;padding:7px 14px;border-radius:var(--r-pill);font-size:12px;background:var(--chip-bg);backdrop-filter:var(--chip-blur);-webkit-backdrop-filter:var(--chip-blur);border:1px solid var(--card-line)}
+  .conn-pill .dot{width:7px;height:7px;border-radius:50%;background:var(--muted);transition:background .25s}
+  .conn-pill.on .dot{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+  .page-head{margin:14px 0 16px}
+  .page-head h2{margin:0 0 6px;font-size:26px;font-weight:700;letter-spacing:-.02em;line-height:1.1}
+  .page-head p{margin:0;color:var(--muted);font-size:13px;line-height:1.55;max-width:36ch}
+  .section-label{font-size:11px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin:22px 2px 10px;font-weight:600}
+
+  /* -------------- 设备卡 -------------- */
+  .dev-card{padding:14px 16px;margin-bottom:10px;cursor:pointer;transition:background .2s,transform .2s var(--spring),border-color .2s}
+  .dev-card:active{transform:scale(.985)}
+  .dev-card.sel{background:var(--accent-soft);border-color:var(--accent)!important}
+  .dev-top{display:flex;align-items:center;gap:12px}
+  .dev-ic{width:40px;height:40px;border-radius:var(--r-md);flex:none;display:grid;place-items:center;background:var(--chip-bg);color:var(--accent)}
+  .dev-logo{width:18px;height:34px}
+  .dev-disc{display:none;border:0;place-items:center;width:28px;height:28px;border-radius:50%;flex:none;cursor:pointer;background:var(--accent-soft);color:var(--accent);font-size:15px;transition:transform .18s var(--spring)}
+  .dev-disc:active{transform:scale(.9)}
+  .dev-card.sel .dev-disc{display:grid}
+  .dev-card.sel .dev-state{display:none}
+  .dev-name{flex:1;min-width:0}
+  .dev-name b{font-size:14px;font-weight:600;letter-spacing:.1px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .dev-name small{font-size:11px;color:var(--muted);letter-spacing:.1px}
+  .dev-state{font-size:11px;color:var(--muted);letter-spacing:.1px;flex:none}
+  .dev-state.paired{color:var(--ok)}
+  .dev-meta{display:flex;gap:14px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+  .meta-lbl{font-size:10px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
+  .meta-val{font-size:13px;font-weight:600;letter-spacing:.1px;display:flex;align-items:center;gap:6px}
+  .signal-bars{display:inline-flex;gap:2px;align-items:flex-end;height:12px}
+  .signal-bars i{width:3px;border-radius:1px;background:var(--muted);transition:background .2s}
+  .signal-bars i:nth-child(1){height:4px}.signal-bars i:nth-child(2){height:7px}.signal-bars i:nth-child(3){height:10px}.signal-bars i:nth-child(4){height:12px}
+  .signal-bars i.on{background:var(--accent)}
+  .scan-note{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px;margin-top:14px;padding:0 4px;letter-spacing:.1px}
+  .scan-note .spin{width:12px;height:12px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--accent);animation:spin 1s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* -------------- 调色 -------------- */
+  .color-stage{display:flex;flex-direction:column;gap:14px;padding:4px 0}
+  .sv-panel{position:relative;width:100%;aspect-ratio:1.4/1;border-radius:var(--r-md);cursor:crosshair;touch-action:none;border:1px solid var(--card-line);box-shadow:0 8px 24px rgba(0,0,0,.18);background:linear-gradient(to top,#000,transparent),linear-gradient(to right,#fff,hsl(var(--hue,210) 100% 50%));transition:background .12s linear}
+  .sv-cursor{position:absolute;width:22px;height:22px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.35),0 2px 8px rgba(0,0,0,.35);pointer-events:none;transform:translate(-50%,-50%);transition:left .08s linear,top .08s linear}
+  .hue-strip{position:relative;width:100%;height:28px;border-radius:var(--r-pill);cursor:pointer;touch-action:none;background:linear-gradient(to right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00);border:1px solid var(--card-line);box-shadow:0 4px 14px rgba(0,0,0,.14)}
+  .hue-cursor{position:absolute;top:-3px;bottom:-3px;width:10px;border-radius:var(--r-pill);background:#fff;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.35),0 2px 6px rgba(0,0,0,.3);transform:translateX(-50%);pointer-events:none;transition:left .08s linear}
+  .hex-row{display:flex;align-items:center;gap:10px;width:100%}
+  .swatch{width:38px;height:38px;border-radius:var(--r-sm);flex:none;border:1px solid var(--card-line);transition:background .15s}
+  .hex-input{flex:1;min-width:0;background:var(--chip-bg);backdrop-filter:var(--chip-blur);-webkit-backdrop-filter:var(--chip-blur);border:1px solid var(--line);color:var(--text);border-radius:var(--r-sm);padding:10px 14px;font:inherit;font-size:14px;letter-spacing:.12em;text-transform:uppercase;font-weight:500;outline:none}
+  .hex-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .slider-row{margin-top:4px}
+  .slider-lbl{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:10px;letter-spacing:.1px}
+  .slider-lbl b{color:var(--text);font-weight:600}
+  input[type=range]{width:100%;accent-color:var(--accent);height:22px;background:transparent}
+
+  /* 灯效 3x3 */
+  .effect-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px}
+  .fx-btn{display:flex;flex-direction:column;align-items:center;gap:7px;padding:14px 6px;border:1px solid var(--card-line);background:var(--card-bg);backdrop-filter:var(--card-blur);-webkit-backdrop-filter:var(--card-blur);color:var(--text);border-radius:var(--r-md);font:inherit;font-size:11px;letter-spacing:.1px;cursor:pointer;transition:background .18s,transform .18s var(--spring),border-color .18s}
+  .fx-btn:active{transform:scale(.96)}
+  .fx-btn i{display:block;font-style:normal;font-size:20px;line-height:1;color:var(--accent);transition:transform .25s var(--spring)}
+  .fx-btn.sel{background:var(--accent-soft);border-color:var(--accent)}
+  .fx-btn.sel i{transform:scale(1.15)}
+  .fx-btn.sel::after{content:"";position:absolute;top:6px;right:6px;width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent)}
+  .fx-btn{position:relative;overflow:hidden}
+
+  /* -------------- 音乐：频谱 + 节拍环 -------------- */
+  .music-stage{padding:4px 0}
+  .spectrum-wrap{height:170px;background:var(--card-bg);backdrop-filter:var(--card-blur);-webkit-backdrop-filter:var(--card-blur);border:1px solid var(--card-line);border-radius:var(--r-lg);padding:12px;margin-bottom:14px}
+  #spectrum{width:100%;height:100%;display:block}
+  .beat-ring{height:170px;background:var(--card-bg);backdrop-filter:var(--card-blur);-webkit-backdrop-filter:var(--card-blur);border:1px solid var(--card-line);border-radius:var(--r-lg);padding:12px;margin-bottom:14px;display:flex;align-items:center;justify-content:center;position:relative}
+  .ring-svg{width:140px;height:140px}
+  .ring-track{fill:none;stroke:var(--spec-track);stroke-width:6}
+  .ring-arc{transform:rotate(-90deg);transform-origin:center}
+  .ring-glow{fill:none;stroke:var(--accent);stroke-width:6;stroke-linecap:round;filter:drop-shadow(0 0 8px var(--accent-soft));transition:stroke-dashoffset .18s var(--spring),stroke .2s}
+  .ring-core{cursor:pointer}
+  .ring-core circle{transition:r .25s var(--spring),fill .25s}
+  .mode-row{margin-bottom:14px}
+  .mode-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+  .mode-btn{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--card-line);background:var(--card-bg);backdrop-filter:var(--card-blur);-webkit-backdrop-filter:var(--card-blur);color:var(--text);border-radius:var(--r-md);font:inherit;font-size:13px;cursor:pointer;transition:background .18s,border-color .18s;text-align:left}
+  .mode-btn i{font-style:normal;font-size:18px;color:var(--accent);flex:none}
+  .mode-btn:active{transform:scale(.98)}
+  .mode-btn.sel{background:var(--accent-soft);border-color:var(--accent)}
+
+  /* iOS 开关 */
+  .switch-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 16px;margin-top:8px}
+  .switch-row b{font-size:14px;font-weight:600;display:block}
+  .switch-row span{font-size:12px;color:var(--muted);display:block;margin-top:3px}
+  .switch{width:51px;height:31px;border-radius:var(--r-pill);border:0;background:rgba(126,141,166,.32);position:relative;cursor:pointer;flex:none;transition:background .25s}
+  .switch .knob{position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.3);transition:transform .3s var(--spring)}
+  .switch.on{background:var(--accent)}
+  .switch.on .knob{transform:translateX(20px)}
+
+  /* -------------- 设置：分组 -------------- */
+  .set-group{margin-bottom:14px}
+  .set-card{padding:0}
+  .set-row{display:flex;align-items:center;gap:12px;width:100%;padding:13px 14px;background:transparent;border:0;border-bottom:1px solid var(--line);color:var(--text);font:inherit;text-align:left;cursor:pointer;transition:background .18s}
+  .set-row:last-child{border-bottom:0}
+  .set-row:hover{background:var(--accent-soft)}
+  .set-ic{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:var(--chip-bg);color:var(--accent);flex:none;font-size:16px}
+  .set-row b{font-size:14px;font-weight:500;letter-spacing:.1px;flex:1}
+  .set-row .chev{color:var(--muted);font-size:14px}
+  .set-row .val{color:var(--muted);font-size:12px;letter-spacing:.1px}
+  .seg-btn{display:inline-flex;gap:4px;padding:3px;background:var(--chip-bg);border:1px solid var(--line);border-radius:var(--r-pill)}
+  .seg-btn button{border:0;background:transparent;color:var(--muted);padding:6px 12px;font:inherit;font-size:12px;border-radius:var(--r-pill);cursor:pointer;transition:background .2s,color .2s}
+  .seg-btn button.on{background:var(--accent);color:#fff;font-weight:600}
+
+  /* -------------- 悬浮 Dock -------------- */
+  .dock{position:absolute;left:12px;right:12px;bottom:10px;z-index:40;border-radius:38px;padding:8px;background:var(--glass-bg);backdrop-filter:blur(44px);-webkit-backdrop-filter:blur(44px);border:1px solid var(--glass-line);box-shadow:0 20px 50px var(--dock-shadow);overflow:hidden}
+  .dock-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:2px}
+  .tab{display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 0 7px;border:0;background:transparent;border-radius:16px;color:var(--muted);font:inherit;cursor:pointer;transition:color .2s,background .2s}
+  .tab:hover{color:var(--text);background:var(--chip-bg)}
+  .tab i{font-style:normal;font-size:21px;transition:transform .32s var(--spring)}
+  .tab.active{color:var(--accent);background:var(--accent-soft)}
+  .tab.active i{transform:scale(1.12)}
+  .tab span{font-size:10px;letter-spacing:.1px;font-weight:500}
+
+  /* Toast */
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(18px);opacity:0;background:var(--chip-bg);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--line);border-radius:var(--r-pill);padding:11px 20px;font-size:13px;color:var(--text);box-shadow:0 14px 40px rgba(0,0,0,.3);pointer-events:none;z-index:90;transition:opacity .28s,transform .34s var(--spring)}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* 侧入口（更多页） */
+  .more-list .row{display:flex;align-items:center;gap:12px;padding:13px 14px;border-bottom:1px solid var(--line)}
+  .more-list .row:last-child{border-bottom:0}
+  .more-list .row .ico{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:var(--chip-bg);color:var(--accent);flex:none;font-size:16px}
+  .more-list .row .txt b{font-size:14px;font-weight:500;display:block}
+  .more-list .row .txt small{font-size:11px;color:var(--muted);display:block;margin-top:3px}
+
+  .tips-card{display:flex;align-items:flex-start;gap:12px;padding:13px 14px;border-bottom:1px solid var(--line)}
+  .tips-card:last-child{border-bottom:0}
+  .tips-card .emo{width:36px;height:36px;border-radius:10px;background:var(--chip-bg);color:var(--accent);display:grid;place-items:center;font-size:20px;flex:none}
+  .tips-card b{font-size:14px;font-weight:600;display:block}
+  .tips-card small{font-size:12px;color:var(--muted);display:block;margin-top:3px;line-height:1.55}
+
+  /* 协议栈验证页 */
+  .proto{padding:8px 0}
+  .proto .verdict{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+  .proto .vcol{background:var(--chip-bg);border:1px solid var(--line);border-radius:var(--r-md);padding:12px}
+  .proto .vcol small{font-size:10px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;display:block;margin-bottom:6px}
+  .proto .vcol .hex{font-family:ui-monospace,SFMono-Regular,"JetBrains Mono",Menlo,monospace;font-size:11px;letter-spacing:.04em;line-height:1.5;word-break:break-all}
+  .proto .ok-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:var(--r-pill);background:rgba(52,199,89,.14);color:var(--ok);font-size:12px;font-weight:600}
+  .proto .ok-chip::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--ok)}
+
+  /* 流量计 */
+  .stat-row{display:flex;justify-content:space-between;gap:14px;padding:14px 16px}
+  .stat-row .col{flex:1}
+  .stat-row small{font-size:10px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;display:block;margin-bottom:4px}
+  .stat-row b{font-size:18px;font-weight:700;letter-spacing:-.01em}
+
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none!important;animation:none!important}
+  }
+  @media (prefers-reduced-transparency:reduce){
+    .dock,.glass,.glass-card,.conn-pill,.fx-btn,.mode-btn,.spectrum-wrap,.beat-ring,.set-ic,.dev-ic,.toast,.hex-input,.seg,.seg-btn{
+      backdrop-filter:none;-webkit-backdrop-filter:none;background:var(--bg2)
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- 像素 Logo 符号（复用） -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+  <symbol id="logo-glyph" viewBox="0 0 360 672">
+    <g fill="var(--logo-fill)">
+      <rect x="144" y="48"  width="24" height="216"/><rect x="168" y="72"  width="24" height="72"/>
+      <rect x="120" y="120" width="24" height="120"/><rect x="168" y="192" width="24" height="120"/>
+      <rect x="192" y="264" width="24" height="96"/><rect x="120" y="288" width="24" height="72"/>
+      <rect x="216" y="288" width="24" height="168"/><rect x="96"  y="336" width="24" height="120"/>
+      <rect x="240" y="336" width="24" height="96"/><rect x="72"  y="360" width="24" height="48"/>
+      <rect x="120" y="408" width="24" height="72"/><rect x="192" y="408" width="24" height="72"/>
+      <rect x="48"  y="432" width="24" height="120"/><rect x="144" y="432" width="48" height="48"/>
+      <rect x="288" y="432" width="24" height="120"/><rect x="72"  y="480" width="24" height="96"/>
+      <rect x="264" y="480" width="24" height="96"/><rect x="96"  y="504" width="48" height="72"/>
+      <rect x="216" y="504" width="48" height="96"/><rect x="24"  y="528" width="24" height="24"/>
+      <rect x="312" y="528" width="24" height="24"/><rect x="144" y="552" width="24" height="72"/>
+      <rect x="192" y="552" width="24" height="72"/><rect x="120" y="576" width="24" height="24"/>
+      <rect x="168" y="576" width="24" height="72"/>
+    </g>
+  </symbol>
+</svg>
+
+<div class="toolbar">
+  <div class="toolbar-left">
+    <svg class="t-logo" viewBox="0 0 360 672"><use href="#logo-glyph"/></svg>
+    <div>
+      <b>万兽之王 · 应援棒</b>
+      <small>当前界面 HTML 原型（Flutter UI 1:1 复刻）</small>
+    </div>
+  </div>
+  <div class="seg" role="group" aria-label="主题切换">
+    <button type="button" data-theme="dark"  aria-pressed="true" onclick="setTheme('dark')">深色</button>
+    <button type="button" data-theme="light" aria-pressed="false" onclick="setTheme('light')">浅色</button>
+    <button type="button" data-theme="auto"  aria-pressed="false" onclick="setTheme('auto')">跟随</button>
+  </div>
+</div>
+
+<div class="phone" id="phone">
+  <div class="dynamic-island"></div>
+  <div class="statusbar">
+    <span class="time">19:30</span>
+    <span class="sys">
+      <span>●●●●</span>
+      <span>⌃</span>
+      <span>■</span>
+    </span>
+  </div>
+
+  <!-- ========== 连接（默认） ========== -->
+  <section class="screen active" id="scr-connect">
+    <span class="conn-pill" id="connPill"><span class="dot"></span><span id="pillText">未连接</span></span>
+
+    <div class="page-head">
+      <h2>附近设备</h2>
+      <p>点选设备卡片即可配对连接，无需密码。</p>
+    </div>
+
+    <div class="dev-card glass-card" data-d="BABY-SWORD-01" onclick="pickDevice(this)">
+      <div class="dev-top">
+        <span class="dev-ic"><svg class="dev-logo" viewBox="0 0 360 672"><use href="#logo-glyph"/></svg></span>
+        <div class="dev-name"><b>BABY-SWORD-01</b><small>光剑 Pro · v2.4</small></div>
+        <span class="dev-state">未配对</span>
+        <button class="dev-disc" type="button" aria-label="断开连接" onclick="event.stopPropagation(); disconnect(this)">⛓︎✕</button>
+      </div>
+      <div class="dev-meta">
+        <div class="meta-item"><div class="meta-lbl">信号</div><div class="meta-val"><span class="signal-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span>−52 dBm</div></div>
+        <div class="meta-item"><div class="meta-lbl">设备</div><div class="meta-val">应援棒</div></div>
+      </div>
+    </div>
+
+    <div class="dev-card glass-card" data-d="LIGHT-STICK-A3" onclick="pickDevice(this)">
+      <div class="dev-top">
+        <span class="dev-ic"><svg class="dev-logo" viewBox="0 0 360 672"><use href="#logo-glyph"/></svg></span>
+        <div class="dev-name"><b>LIGHT-STICK-A3</b><small>应援棒 X · v2.4</small></div>
+        <span class="dev-state">未配对</span>
+        <button class="dev-disc" type="button" aria-label="断开连接" onclick="event.stopPropagation(); disconnect(this)">⛓︎✕</button>
+      </div>
+      <div class="dev-meta">
+        <div class="meta-item"><div class="meta-lbl">信号</div><div class="meta-val"><span class="signal-bars"><i class="on"></i><i class="on"></i><i></i><i></i></span>−68 dBm</div></div>
+        <div class="meta-item"><div class="meta-lbl">设备</div><div class="meta-val">小应援棒</div></div>
+      </div>
+    </div>
+
+    <div class="dev-card glass-card" data-d="KIDS-LIGHT-7F" onclick="pickDevice(this)">
+      <div class="dev-top">
+        <span class="dev-ic"><svg class="dev-logo" viewBox="0 0 360 672"><use href="#logo-glyph"/></svg></span>
+        <div class="dev-name"><b>KIDS-LIGHT-7F</b><small>演出宝宝剑 · v1.8</small></div>
+        <span class="dev-state">未配对</span>
+        <button class="dev-disc" type="button" aria-label="断开连接" onclick="event.stopPropagation(); disconnect(this)">⛓︎✕</button>
+      </div>
+      <div class="dev-meta">
+        <div class="meta-item"><div class="meta-lbl">信号</div><div class="meta-val"><span class="signal-bars"><i class="on"></i><i class="on"></i><i></i><i></i></span>−71 dBm</div></div>
+        <div class="meta-item"><div class="meta-lbl">设备</div><div class="meta-val">演出宝宝剑</div></div>
+      </div>
+    </div>
+
+    <div class="dev-card glass-card" data-d="GLW-MTL-9C" onclick="pickDevice(this)">
+      <div class="dev-top">
+        <span class="dev-ic"><svg class="dev-logo" viewBox="0 0 360 672"><use href="#logo-glyph"/></svg></span>
+        <div class="dev-name"><b>GLW-MTL-9C</b><small>七色棒 · v3.1</small></div>
+        <span class="dev-state">未配对</span>
+        <button class="dev-disc" type="button" aria-label="断开连接" onclick="event.stopPropagation(); disconnect(this)">⛓︎✕</button>
+      </div>
+      <div class="dev-meta">
+        <div class="meta-item"><div class="meta-lbl">信号</div><div class="meta-val"><span class="signal-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span>−44 dBm</div></div>
+        <div class="meta-item"><div class="meta-lbl">设备</div><div class="meta-val">七色棒</div></div>
+      </div>
+    </div>
+
+    <div class="dev-card glass-card" data-d="EDG-LGT-2A" onclick="pickDevice(this)">
+      <div class="dev-top">
+        <span class="dev-ic"><svg class="dev-logo" viewBox="0 0 360 672"><use href="#logo-glyph"/></svg></span>
+        <div class="dev-name"><b>EDG-LGT-2A</b><small>边缘应援棒 · v2.0</small></div>
+        <span class="dev-state">未配对</span>
+        <button class="dev-disc" type="button" aria-label="断开连接" onclick="event.stopPropagation(); disconnect(this)">⛓︎✕</button>
+      </div>
+      <div class="dev-meta">
+        <div class="meta-item"><div class="meta-lbl">信号</div><div class="meta-val"><span class="signal-bars"><i class="on"></i><i></i><i></i><i></i></span>−82 dBm</div></div>
+        <div class="meta-item"><div class="meta-lbl">设备</div><div class="meta-val">边缘棒</div></div>
+      </div>
+    </div>
+
+    <div class="scan-note"><span class="spin"></span>正在扫描附近的应援棒设备</div>
+  </section>
+
+  <!-- ========== 调色 ========== -->
+  <section class="screen" id="scr-color">
+    <div class="page-head">
+      <h2>调色盘</h2>
+      <p>方形面板选色或直接输入十六进制，选灯效即时应用。</p>
+    </div>
+
+    <div class="color-stage">
+      <div class="sv-panel" id="svPanel" style="--hue:210">
+        <div class="sv-cursor" id="svCursor" style="left:100%;top:0%;background:#0a84ff"></div>
+      </div>
+      <div class="hue-strip" id="hueStrip"><div class="hue-cursor" id="hueCursor" style="left:58%"></div></div>
+      <div class="hex-row">
+        <div class="swatch" id="swatch" style="background:#0a84ff"></div>
+        <input class="hex-input" id="hexInput" type="text" value="0A84FF" maxlength="6" spellcheck="false" aria-label="颜色十六进制值">
+      </div>
+    </div>
+
+    <div class="slider-row">
+      <div class="slider-lbl"><span>亮度</span><b id="brightnessVal">80%</b></div>
+      <input type="range" min="0" max="100" value="80" oninput="document.getElementById('brightnessVal').textContent=this.value+'%'">
+    </div>
+
+    <div class="section-label">灯光效果（9 种）</div>
+    <div class="effect-grid" id="effectGrid">
+      <button class="fx-btn sel" type="button" data-fx="ConstantlyOn"   onclick="pickFx(this)"><i>◉</i>常亮</button>
+      <button class="fx-btn" type="button" data-fx="Breathe"        onclick="pickFx(this)"><i>∿</i>呼吸</button>
+      <button class="fx-btn" type="button" data-fx="FlashMob"       onclick="pickFx(this)"><i>⚡</i>快闪</button>
+      <button class="fx-btn" type="button" data-fx="Blink"          onclick="pickFx(this)"><i>◐</i>眨眼</button>
+      <button class="fx-btn" type="button" data-fx="Party"          onclick="pickFx(this)"><i>✺</i>聚会</button>
+      <button class="fx-btn" type="button" data-fx="Rainbow"        onclick="pickFx(this)"><i>⌒</i>彩虹</button>
+      <button class="fx-btn" type="button" data-fx="StarrySky"      onclick="pickFx(this)"><i>✦</i>星空</button>
+      <button class="fx-btn" type="button" data-fx="Random"         onclick="pickFx(this)"><i>⚄</i>随机色</button>
+      <button class="fx-btn" type="button" data-fx="BlackScreen"    onclick="pickFx(this)"><i>●</i>黑屏</button>
+    </div>
+  </section>
+
+  <!-- ========== 音乐 ========== -->
+  <section class="screen" id="scr-music">
+    <div class="page-head">
+      <h2>音乐调光</h2>
+      <p>应援棒随环境音量与频谱律动，选模式匹配演出场景。</p>
+    </div>
+
+    <div class="music-stage">
+      <div class="spectrum-wrap"><canvas id="spectrum"></canvas></div>
+
+      <div class="beat-ring" aria-label="节拍环形指示器">
+        <svg class="ring-svg" viewBox="0 0 140 140">
+          <circle class="ring-track" cx="70" cy="70" r="58"/>
+          <circle id="ringArcTop" class="ring-arc ring-glow" cx="70" cy="70" r="58" stroke-dasharray="364.4" stroke-dashoffset="290"/>
+          <g class="ring-core">
+            <circle id="ringCore" cx="70" cy="70" r="26" fill="var(--accent)"/>
+            <circle cx="70" cy="70" r="34" fill="none" stroke="var(--accent)" stroke-opacity=".18" stroke-width="2"/>
+          </g>
+        </svg>
+      </div>
+
+      <div class="switch-row glass-card">
+        <div><b>音乐响应</b><span>随环境音量律动</span></div>
+        <button class="switch on" id="musicSwitch" type="button" role="switch" aria-checked="true" onclick="musicToggle(this)"><span class="knob"></span></button>
+      </div>
+
+      <div class="mode-row">
+        <div class="slider-lbl"><span>灵敏度</span><b id="sensVal">60%</b></div>
+        <input type="range" min="0" max="100" value="60" oninput="document.getElementById('sensVal').textContent=this.value+'%'">
+      </div>
+
+      <div class="section-label">律动模式</div>
+      <div class="mode-grid">
+        <button class="mode-btn sel" type="button" data-mode="Mono"     onclick="pickMode(this)"><i>◉</i>单色</button>
+        <button class="mode-btn" type="button" data-mode="Rainbow7"  onclick="pickMode(this)"><i>⌒</i>七彩</button>
+        <button class="mode-btn" type="button" data-mode="Strong"    onclick="pickMode(this)"><i>⚡</i>强烈</button>
+        <button class="mode-btn" type="button" data-mode="Soft"      onclick="pickMode(this)"><i>∿</i>柔和</button>
+      </div>
+
+      <div class="stat-row glass-card">
+        <div class="col"><small>音量</small><b id="volVal">0.42</b></div>
+        <div class="col"><small>低频</small><b id="bassVal">0.31</b></div>
+        <div class="col"><small>高频</small><b id="trebleVal">0.18</b></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 设置 ========== -->
+  <section class="screen" id="scr-settings">
+    <div class="page-head">
+      <h2>设置</h2>
+      <p>管理设备、灯光、音频与系统主题。</p>
+    </div>
+
+    <!-- 主题模式 -->
+    <div class="set-group">
+      <div class="section-label" style="margin-top:0">主题模式</div>
+      <div class="glass-card set-card">
+        <div class="set-row">
+          <span class="set-ic">◐</span>
+          <b>显示模式</b>
+          <span class="seg-btn" role="group" aria-label="主题模式">
+            <button class="on" onclick="pickThemeBtn(this,'auto')">跟随</button>
+            <button onclick="pickThemeBtn(this,'light')">浅色</button>
+            <button onclick="pickThemeBtn(this,'dark')">深色</button>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 我的设备 -->
+    <div class="set-group">
+      <div class="section-label">我的设备</div>
+      <div class="glass-card set-card">
+        <div class="set-row"><span class="set-ic">⌬</span><b>已连接</b><span class="val" id="devVal">未连接</span><span class="chev">›</span></div>
+        <div class="set-row" onclick="toast('已清除设备记录')"><span class="set-ic" style="color:var(--err)">✕</span><b style="color:var(--err)">清除设备记录</b><span class="val">断开并遗忘</span><span class="chev">›</span></div>
+      </div>
+    </div>
+
+    <!-- 灯光偏好 -->
+    <div class="set-group">
+      <div class="section-label">灯光偏好</div>
+      <div class="glass-card set-card">
+        <div class="set-row"><span class="set-ic">☀</span><b>默认亮度</b><span class="val" id="defBriVal">80%</span><input type="range" min="0" max="100" value="80" style="width:90px;accent-color:var(--accent)" oninput="document.getElementById('defBriVal').textContent=this.value+'%'"></div>
+        <div class="set-row"><span class="set-ic">⏻</span><b>默认开机效果</b><span class="val">常亮</span><span class="chev">›</span></div>
+        <div class="set-row"><span class="set-ic">⏱</span><b>默认效果速度</b><span class="val">50%</span><span class="chev">›</span></div>
+      </div>
+    </div>
+
+    <!-- 音频律动 -->
+    <div class="set-group">
+      <div class="section-label">音频律动</div>
+      <div class="glass-card set-card">
+        <div class="set-row"><span class="set-ic">♪</span><b>音乐响应</b><button class="switch on" type="button" role="switch" aria-checked="true" onclick="miniToggle(this); event.stopPropagation()"><span class="knob"></span></button></div>
+        <div class="set-row"><span class="set-ic">⚙</span><b>灵敏度</b><span class="val" id="defSensVal">60%</span><input type="range" min="0" max="100" value="60" style="width:90px;accent-color:var(--accent)" oninput="document.getElementById('defSensVal').textContent=this.value+'%'"></div>
+        <div class="set-row"><span class="set-ic">⌘</span><b>律动模式</b><span class="seg-btn"><button class="on" onclick="event.stopPropagation()">单色</button><button onclick="event.stopPropagation()">七彩</button><button onclick="event.stopPropagation()">强烈</button><button onclick="event.stopPropagation()">柔和</button></span></div>
+      </div>
+    </div>
+
+    <!-- 关于 + 侧入口 -->
+    <div class="set-group">
+      <div class="section-label">其他</div>
+      <div class="glass-card more-list">
+        <button class="row" type="button" onclick="goMore('tips')"  style="border:0;background:transparent;color:var(--text);font:inherit;width:100%;text-align:left;cursor:pointer">
+          <span class="ico">⚠</span><span class="txt"><b>温馨提示</b><small>演出前请阅读安全提示</small></span>
+        </button>
+        <button class="row" type="button" onclick="goMore('seat')"  style="border:0;background:transparent;color:var(--text);font:inherit;width:100%;text-align:left;cursor:pointer">
+          <span class="ico">⚲</span><span class="txt"><b>座位绑定</b><small>同步你的区域 / 座位号</small></span>
+        </button>
+        <button class="row" type="button" onclick="goMore('proto')" style="border:0;background:transparent;color:var(--text);font:inherit;width:100%;text-align:left;cursor:pointer">
+          <span class="ico">✓</span><span class="txt"><b>协议验证</b><small>端到端链路 61 项测试</small></span>
+        </button>
+        <button class="row" type="button" onclick="goMore('about')" style="border:0;background:transparent;color:var(--text);font:inherit;width:100%;text-align:left;cursor:pointer">
+          <span class="ico">ⓘ</span><span class="txt"><b>关于本应用</b><small>v1.0.0 · 万兽之王</small></span>
+        </button>
+      </div>
+    </div>
+
+    <div style="text-align:center;color:var(--muted);font-size:11px;line-height:1.6;margin-top:18px;letter-spacing:.1px">Copyright © 2026 SanXiaoXing<br>All rights reserved.</div>
+  </section>
+
+  <!-- ========== 侧页：温馨提示 ========== -->
+  <section class="screen" id="scr-tips">
+    <div class="page-head">
+      <h2>温馨提示</h2>
+      <p>安全使用应援棒，演出观感更佳。</p>
+    </div>
+    <div class="glass-card">
+      <div class="tips-card"><span class="emo">⚠</span><div><b>请勿直视强光</b><small>避免长时间直视应援棒灯光，防止眼睛不适。</small></div></div>
+      <div class="tips-card"><span class="emo">⌖</span><div><b>儿童需家长陪同</b><small>本产品含有小零件，谨防误食。</small></div></div>
+      <div class="tips-card"><span class="emo">▮</span><div><b>电量提示</b><small>电量低于 20% 时请及时充电。</small></div></div>
+      <div class="tips-card"><span class="emo">☂</span><div><b>防摔防水</b><small>请勿摔落、浸水或置于高温潮湿环境。</small></div></div>
+      <div class="tips-card"><span class="emo">⏻</span><div><b>演出结束后关机</b><small>长按 2 秒关机；长时间不用请断电。</small></div></div>
+      <div class="tips-card"><span class="emo">⚒</span><div><b>请勿自行改装</b><small>故障请联系官方客服，请勿拆解设备。</small></div></div>
+    </div>
+  </section>
+
+  <!-- ========== 侧页：座位绑定 ========== -->
+  <section class="screen" id="scr-seat">
+    <div class="page-head">
+      <h2>座位绑定</h2>
+      <p>绑定你的区域与座位号，灯光随演出现场联动。</p>
+    </div>
+    <div class="glass-card set-card">
+      <div class="set-row">
+        <span class="set-ic">⌖</span>
+        <b>演出区域</b>
+        <span class="val">内场前排</span>
+        <span class="chev">›</span>
+      </div>
+      <div class="set-row">
+        <span class="set-ic">#</span>
+        <b>座位号</b>
+        <span class="val">A12</span>
+        <span class="chev">›</span>
+      </div>
+      <div class="set-row" onclick="toast('已重新检索设备位置')">
+        <span class="set-ic" style="color:var(--accent)">⌖</span>
+        <b>重新定位</b>
+        <span class="val">基于蓝牙基站三角定位</span>
+        <span class="chev">›</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 侧页：协议验证 ========== -->
+  <section class="screen" id="scr-proto">
+    <div class="page-head">
+      <h2>宝宝剑协议验证</h2>
+      <p>Flutter → Rust → 协议层端到端，61 项测试金标准校验。</p>
+    </div>
+    <div class="proto">
+      <div class="glass-card" style="padding:14px 16px;margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+          <b style="font-size:14px">LIGHT_FLASH_HEX 比对</b>
+          <button class="ok-chip" onclick="toast('重新执行端到端校验')">重新校验</button>
+        </div>
+        <div class="verdict">
+          <div class="vcol"><small>重建</small><div class="hex" id="buildHex">02000000100004ff020c06104c6a5e52</div></div>
+          <div class="vcol"><small>金标准</small><div class="hex" id="goldenHex">02000000100004ff020c06104c6a5e52</div></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)">
+          <small style="color:var(--ok);font-weight:600;font-size:12px">● 匹配 · 协议层正确</small>
+          <small style="color:var(--muted);font-size:11px">61 项测试全绿 · IEEE 802.3 CRC32</small>
+        </div>
+      </div>
+      <div class="glass-card stat-row">
+        <div class="col"><small>测试项</small><b>61</b></div>
+        <div class="col"><small>链路</small><b>Dart→Rust→BLE</b></div>
+        <div class="col"><small>BLE 服务</small><b>FFE0</b></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 侧页：关于 ========== -->
+  <section class="screen" id="scr-about">
+    <div class="page-head">
+      <h2>关于</h2>
+      <p>万兽之王应援棒控制器 · 内核选自微信小程序精确反编译。</p>
+    </div>
+    <div class="glass-card" style="padding:18px;text-align:center">
+      <svg style="width:36px;height:68px;margin-bottom:14px" viewBox="0 0 360 672"><use href="#logo-glyph"/></svg>
+      <div style="font-size:18px;font-weight:700;letter-spacing:-.01em;margin-bottom:4px">万兽之王</div>
+      <div style="color:var(--muted);font-size:12px;letter-spacing:.1px">应援棒 / 演出宝宝剑 控制 App</div>
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line);display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;text-align:center">
+        <div><small style="font-size:10px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase">版本</small><div style="font-size:14px;font-weight:600;margin-top:4px">v1.0.0</div></div>
+        <div><small style="font-size:10px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase">协议</small><div style="font-size:14px;font-weight:600;margin-top:4px">9 灯效</div></div>
+        <div><small style="font-size:10px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase">许可</small><div style="font-size:14px;font-weight:600;margin-top:4px">MIT</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 悬浮 Dock ========== -->
+  <div class="dock">
+    <div class="dock-tabs" role="tablist" aria-label="主界面导航">
+      <button class="tab active" type="button" role="tab" data-tab="连接" onclick="go('connect','连接')"><i>⌬</i><span>连接</span></button>
+      <button class="tab" type="button" role="tab" data-tab="调色" onclick="go('color','调色')"><i>◐</i><span>调色</span></button>
+      <button class="tab" type="button" role="tab" data-tab="音乐" onclick="go('music','音乐')"><i>♪</i><span>音乐</span></button>
+      <button class="tab" type="button" role="tab" data-tab="设置" onclick="go('settings','设置')"><i>⚙</i><span>设置</span></button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+  // ========== 主题 ==========
+  const root = document.documentElement;
+  const saved = localStorage.getItem('ws-theme') || 'auto';
+  const prefersDark = matchMedia('(prefers-color-scheme: dark)').matches;
+  function applyTheme(mode){
+    const actual = mode === 'auto' ? (prefersDark ? 'dark' : 'light') : mode;
+    root.dataset.theme = actual;
+    document.querySelectorAll('.seg button').forEach(b =>
+      b.setAttribute('aria-pressed', b.dataset.theme === mode ? 'true' : 'false'));
+  }
+  function setTheme(mode){
+    localStorage.setItem('ws-theme', mode); applyTheme(mode);
+  }
+  applyTheme(saved);
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    if ((localStorage.getItem('ws-theme') || 'auto') === 'auto') applyTheme('auto');
+  });
+  function pickThemeBtn(btn, mode){
+    const grp = btn.parentElement; grp.querySelectorAll('button').forEach(b=>b.classList.remove('on'));
+    btn.classList.add('on'); setTheme(mode); toast('主题：' + (mode==='auto'?'跟随系统':mode==='light'?'浅色':'深色'));
+  }
+
+  // ========== Toast ==========
+  const toastEl = document.getElementById('toast');
+  let toastTimer;
+  function toast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove('show'), 1700);
+  }
+
+  // ========== 屏幕切换 ==========
+  const tabs = ['connect','color','music','settings','tips','seat','proto','about'];
+  function go(screen, tab){
+    document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === 'scr-' + screen));
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+    const active = document.querySelector('.screen.active');
+    if (active) active.scrollTop = 0;
+  }
+  function goMore(screen){ go(screen, '设置'); toast('已进入：'+ ({tips:'温馨提示',seat:'座位绑定',proto:'协议验证',about:'关于本应用'}[screen] || screen)); }
+
+  // ========== 连接：设备卡 ==========
+  const connPill = document.getElementById('connPill');
+  const pillText = document.getElementById('pillText');
+  function pickDevice(card){
+    document.querySelectorAll('.dev-card').forEach(c => {
+      c.classList.remove('sel');
+      const st = c.querySelector('.dev-state');
+      st.textContent = '未配对'; st.classList.remove('paired');
+    });
+    card.classList.add('sel');
+    const st = card.querySelector('.dev-state');
+    st.textContent = '已配对'; st.classList.add('paired');
+    connPill.classList.add('on');
+    pillText.textContent = '已连接 ' + card.dataset.d;
+    document.getElementById('devVal').textContent = card.dataset.d;
+    toast('已连接 ' + card.dataset.d);
+  }
+  function disconnect(btn){
+    const card = btn.closest('.dev-card');
+    card.classList.remove('sel');
+    const st = card.querySelector('.dev-state');
+    st.textContent = '未配对'; st.classList.remove('paired');
+    if(!document.querySelector('.dev-card.sel')){
+      connPill.classList.remove('on');
+      pillText.textContent = '未连接';
+      document.getElementById('devVal').textContent = '未连接';
+    }
+    toast('已断开 ' + card.dataset.d);
+  }
+
+  // ========== 调色：HSV 工具 ==========
+  const svPanel = document.getElementById('svPanel');
+  const svCursor = document.getElementById('svCursor');
+  const hueStrip = document.getElementById('hueStrip');
+  const hueCursor = document.getElementById('hueCursor');
+  const swatch = document.getElementById('swatch');
+  const hexInput = document.getElementById('hexInput');
+  let curHue = 210, curSat = 1, curVal = 1;
+
+  function hsvToRgb(h, s, v){
+    const c = v * s, x = c * (1 - Math.abs((h/60) % 2 - 1)), m = v - c;
+    let r, g, b;
+    if(h < 60){r=c; g=x; b=0} else if(h<120){r=x; g=c; b=0} else if(h<180){r=0; g=c; b=x}
+    else if(h<240){r=0; g=x; b=c} else if(h<300){r=x; g=0; b=c} else{r=c; g=0; b=x}
+    return [Math.round((r+m)*255), Math.round((g+m)*255), Math.round((b+m)*255)];
+  }
+  function rgbToHsv(r, g, b){
+    r/=255; g/=255; b/=255;
+    const max = Math.max(r,g,b), min = Math.min(r,g,b), d = max-min;
+    let h = 0;
+    if(d !== 0){
+      if(max===r) h = ((g-b)/d) % 6;
+      else if(max===g) h = (b-r)/d + 2;
+      else h = (r-g)/d + 4;
+      h *= 60; if(h<0) h += 360;
+    }
+    return [h, max===0 ? 0 : d/max, max];
+  }
+  function rgbToHex(r,g,b){return [r,g,b].map(v=>v.toString(16).padStart(2,'0').toUpperCase()).join('')}
+  function hexToRgb(hex){const n=parseInt(hex,16);return [(n>>16)&255,(n>>8)&255,n&255]}
+
+  function pickFromSV(clientX, clientY){
+    const rect = svPanel.getBoundingClientRect();
+    const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
+    const y = Math.max(0, Math.min(clientY - rect.top, rect.height));
+    curSat = x / rect.width;
+    curVal = 1 - y / rect.height;
+    svCursor.style.left = (curSat * 100) + '%';
+    svCursor.style.top = ((1 - curVal) * 100) + '%';
+    const [r,g,b] = hsvToRgb(curHue, curSat, curVal);
+    applyHexNoSync(rgbToHex(r,g,b));
+  }
+  function dragSV(e){
+    try{ svPanel.setPointerCapture(e.pointerId); }catch(_){}
+    pickFromSV(e.clientX, e.clientY);
+    const move = ev => pickFromSV(ev.clientX, ev.clientY);
+    const up = () => {
+      svPanel.removeEventListener('pointermove', move);
+      svPanel.removeEventListener('pointerup', up);
+      svPanel.removeEventListener('pointercancel', up);
+    };
+    svPanel.addEventListener('pointermove', move);
+    svPanel.addEventListener('pointerup', up);
+    svPanel.addEventListener('pointercancel', up);
+  }
+  svPanel.addEventListener('pointerdown', dragSV);
+
+  function pickFromHue(clientX){
+    const rect = hueStrip.getBoundingClientRect();
+    const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
+    curHue = (x / rect.width) * 360;
+    hueCursor.style.left = (x / rect.width * 100) + '%';
+    svPanel.style.setProperty('--hue', curHue);
+    const [r,g,b] = hsvToRgb(curHue, curSat, curVal);
+    applyHexNoSync(rgbToHex(r,g,b));
+  }
+  function dragHue(e){
+    try{ hueStrip.setPointerCapture(e.pointerId); }catch(_){}
+    pickFromHue(e.clientX);
+    const move = ev => pickFromHue(ev.clientX);
+    const up = () => {
+      hueStrip.removeEventListener('pointermove', move);
+      hueStrip.removeEventListener('pointerup', up);
+      hueStrip.removeEventListener('pointercancel', up);
+    };
+    hueStrip.addEventListener('pointermove', move);
+    hueStrip.addEventListener('pointerup', up);
+    hueStrip.addEventListener('pointercancel', up);
+  }
+  hueStrip.addEventListener('pointerdown', dragHue);
+
+  function applyHexNoSync(hex){
+    hex = hex.replace('#','').toUpperCase();
+    if(!/^[0-9A-F]{6}$/.test(hex)) return;
+    hexInput.value = hex;
+    swatch.style.background = '#' + hex;
+    svCursor.style.background = '#' + hex;
+  }
+  function syncFromHex(hex){
+    hex = hex.replace('#','').toUpperCase();
+    if(!/^[0-9A-F]{6}$/.test(hex)) return;
+    applyHexNoSync(hex);
+    const [r,g,b] = hexToRgb(hex);
+    const [h,s,v] = rgbToHsv(r,g,b);
+    curHue = h; curSat = s; curVal = v;
+    svPanel.style.setProperty('--hue', h);
+    svCursor.style.left = (s * 100) + '%';
+    svCursor.style.top = ((1 - v) * 100) + '%';
+    hueCursor.style.left = (h / 360 * 100) + '%';
+  }
+  hexInput.addEventListener('input', () => {
+    let v = hexInput.value.replace(/[^0-9a-fA-F]/g,'').toUpperCase().slice(0,6);
+    hexInput.value = v;
+    if(v.length === 6) syncFromHex(v);
+  });
+  syncFromHex('0A84FF');
+
+  function pickFx(btn){
+    document.querySelectorAll('#effectGrid .fx-btn').forEach(b=>b.classList.remove('sel'));
+    btn.classList.add('sel');
+    toast('已应用：' + btn.textContent.trim() + ' #' + hexInput.value);
+  }
+
+  // ========== 音乐：频谱 + 节拍环 ==========
+  const spec = document.getElementById('spectrum');
+  const sctx = spec.getContext('2d');
+  const musicSwitch = document.getElementById('musicSwitch');
+  const ringArc = document.getElementById('ringArcTop');
+  const ringCore = document.getElementById('ringCore');
+  let specActive = false, specRAF;
+  const BARS = 44;
+  const RING_CIRC = 2 * Math.PI * 58;
+
+  function sizeSpec(){
+    const r = spec.getBoundingClientRect();
+    spec.width = r.width * devicePixelRatio;
+    spec.height = r.height * devicePixelRatio;
+    sctx.setTransform(1,0,0,1,0,0);
+    sctx.scale(devicePixelRatio, devicePixelRatio);
+  }
+  function drawSpec(t){
+    const w = spec.width / devicePixelRatio, h = spec.height / devicePixelRatio;
+    sctx.clearRect(0, 0, w, h);
+    const mid = h / 2;
+    const gap = 2, bw = (w - gap*(BARS-1)) / BARS;
+    const on = musicSwitch.classList.contains('on');
+    const accent = getComputedStyle(root).getPropertyValue('--accent').trim();
+    const track = getComputedStyle(root).getPropertyValue('--spec-track').trim();
+
+    const bars = [];
+    for(let i = 0; i < BARS; i++){
+      const base = on ? (0.35 + 0.65 * Math.pow(1 - i/BARS, 1.1)) : 0.06;
+      const wave = on
+        ? (0.35 + 0.28*Math.sin(t*0.0025 + i*0.32) + 0.22*Math.sin(t*0.0048 + i*0.71) + 0.12*Math.sin(t*0.009 + i*1.3))
+        : 0;
+      const v = Math.min(base*0.45 + wave*0.62, 1);
+      bars.push(Math.max(v * mid * 0.82, mid * 0.04));
+    }
+    sctx.fillStyle = track;
+    for(let i = 0; i < BARS; i++) sctx.fillRect(i*(bw+gap), 0, bw, h);
+    for(let i = 0; i < BARS; i++){
+      const bh = bars[i];
+      const x = i*(bw+gap);
+      const gradU = sctx.createLinearGradient(0, mid-bh, 0, mid);
+      gradU.addColorStop(0, accent); gradU.addColorStop(1, accent + '88');
+      sctx.fillStyle = gradU;
+      sctx.fillRect(x, mid-bh, bw, bh);
+      const gradL = sctx.createLinearGradient(0, mid, 0, mid+bh);
+      gradL.addColorStop(0, accent + '55'); gradL.addColorStop(1, accent + '0d');
+      sctx.fillStyle = gradL;
+      sctx.fillRect(x, mid, bw, bh);
+    }
+    if(on){
+      sctx.beginPath();
+      sctx.strokeStyle = accent;
+      sctx.lineWidth = 1.5;
+      sctx.shadowColor = accent; sctx.shadowBlur = 6; sctx.globalAlpha = 0.92;
+      for(let i = 0; i < BARS; i++){
+        const bh = bars[i];
+        const x = i*(bw+gap) + bw/2;
+        const y = mid - bh - 3;
+        if(i === 0){ sctx.moveTo(x, y); }
+        else{
+          const px = (i-1)*(bw+gap) + bw/2;
+          const py = mid - bars[i-1] - 3;
+          const cpx = (px + x) / 2;
+          sctx.quadraticCurveTo(cpx, py, x, y);
+        }
+      }
+      sctx.stroke();
+      sctx.shadowBlur = 0; sctx.globalAlpha = 1;
+    }
+    sctx.strokeStyle = track; sctx.lineWidth = 1; sctx.globalAlpha = 1;
+    sctx.beginPath(); sctx.moveTo(0, mid); sctx.lineTo(w, mid); sctx.stroke();
+
+    // 节拍环 + 仪表
+    let bass = 0, treble = 0, volume = 0;
+    for(let i = 0; i < 14; i++) bass += bars[i];
+    bass = (bass / 14 / mid);
+    for(let i = BARS-12; i < BARS; i++) treble += bars[i];
+    treble = (treble / 12 / mid);
+    volume = bars.reduce((a,b)=>a+b,0) / BARS / mid;
+
+    const off = RING_CIRC * (1 - Math.min(volume*1.4, 1));
+    ringArc.setAttribute('stroke-dashoffset', off);
+    ringCore.setAttribute('r', 22 + 14 * Math.min(bass + volume*0.6, 1));
+    document.getElementById('volVal').textContent = volume.toFixed(2);
+    document.getElementById('bassVal').textContent = bass.toFixed(2);
+    document.getElementById('trebleVal').textContent = treble.toFixed(2);
+  }
+  function specLoop(t){
+    drawSpec(t);
+    if(specActive) specRAF = requestAnimationFrame(specLoop);
+  }
+  const scrMusic = document.getElementById('scr-music');
+  const mo = new MutationObserver(() => {
+    if(scrMusic.classList.contains('active')){
+      if(!specActive){ specActive = true; sizeSpec(); specLoop(performance.now()); }
+    } else { specActive = false; cancelAnimationFrame(specRAF); }
+  });
+  mo.observe(scrMusic, {attributes:true, attributeFilter:['class']});
+  window.addEventListener('resize', () => { if(specActive) sizeSpec(); });
+
+  function musicToggle(sw){
+    const on = sw.classList.toggle('on');
+    sw.setAttribute('aria-checked', on ? 'true' : 'false');
+    toast(on ? '音乐响应已开启' : '音乐响应已关闭');
+  }
+  function pickMode(btn){
+    document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('sel'));
+    btn.classList.add('sel');
+    toast('律动模式：' + btn.textContent.trim());
+  }
+  function miniToggle(sw){
+    const on = sw.classList.toggle('on');
+    sw.setAttribute('aria-checked', on ? 'true' : 'false');
+    toast(on ? '已开启' : '已关闭');
+  }
+</script>
+</body>
+</html>
