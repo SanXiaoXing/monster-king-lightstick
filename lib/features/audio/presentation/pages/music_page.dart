@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/physics.dart';
 
 import '../../../../app/theme/app_theme.dart';
 import '../../../../shared/theme/spacing.dart';
@@ -300,7 +301,16 @@ class _StatusDot extends StatelessWidget {
 /// `value` 保留 Rust 律动引擎所需的完整模式名（如「单色律动」），
 /// `label` 是短显名（与 prototype 的「单色 / 七彩 / 强烈 / 柔和」一致）。
 /// 功能不变：mode 状态机、SettingsStore 读写路径不变。
-class _ModePill extends StatelessWidget {
+/// 律动模式：1×4 段按钮。
+/// 采用与 [GlassTabBar._SelectedPill] 严格一致的滑动胶囊机机制：
+/// - 外层 pill 容器固定不变，选中态不再是「该 cell 变色」，
+///   而是一颗悬浮胶囊 [_ModeSlidingPill] 以临界阻尼弹簧在四档间物理滑动
+///   （stiffness 246 / damping 31.4，response ≈ 0.40 s，无过冲）。
+/// - 只重 [_ModePillCell]，背景透明、只负责点击 + 文字颜色翻转，
+///   所有视觉重心都集中在滑动胶囊上，与 dock 同型同步。
+/// `value` 保留 Rust 律动引擎所需的完整模式名（如「单色律动」），
+/// `label` 是短显名（与 prototype 的「单色 / 七彩 / 强烈 / 柔和」一致）。
+class _ModePill extends StatefulWidget {
   const _ModePill({required this.selected, required this.onPick});
   final String selected;
   final void Function(String) onPick;
@@ -312,9 +322,22 @@ class _ModePill extends StatelessWidget {
     ('柔和', '柔和'),
   ];
 
+  int _indexOf(String value) {
+    for (var i = 0; i < _modes.length; i++) {
+      if (_modes[i].$1 == value) return i;
+    }
+    return 0;
+  }
+
+  @override
+  State<_ModePill> createState() => _ModePillState();
+}
+
+class _ModePillState extends State<_ModePill> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final activeIdx = widget._indexOf(widget.selected);
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
@@ -322,23 +345,156 @@ class _ModePill extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: scheme.outlineVariant),
       ),
-      child: Row(
-        children: [
-          for (final (value, label) in _modes)
-            Expanded(
-              child: _ModePillCell(
-                value: value,
-                label: label,
-                active: selected == value,
-                onTap: () => onPick(value),
+      // LayoutBuilder 必须在 Stack 外层，否则 Positioned 失去 StackParentData。
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // 每格宽度 = 内容区宽 / 4，pill 两侧各留 4，贴近格位、视觉饱满。
+          final count = _ModePill._modes.length;
+          final slot = constraints.maxWidth / count;
+          final pillW = slot - 8;
+          return Stack(
+            children: [
+              _ModeSlidingPill(
+                left: activeIdx * slot + 4,
+                width: pillW,
               ),
-            ),
-        ],
+              Row(
+                children: [
+                  for (var i = 0; i < count; i++)
+                    Expanded(
+                      child: _ModePillCell(
+                        value: _ModePill._modes[i].$1,
+                        label: _ModePill._modes[i].$2,
+                        active: i == activeIdx,
+                        onTap: () => widget.onPick(_ModePill._modes[i].$1),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 }
 
+/// 选中态滑动胶囊：与 [GlassTabBar] `_SelectedPill` 使用同一份临界阻尼弹簧。
+/// 必须作为 Stack 的直接子节点使用（依赖 StackParentData）。
+/// left / width 由父级 LayoutBuilder 算好后传入，弹簧不跳变、可中断重定向。
+class _ModeSlidingPill extends StatefulWidget {
+  const _ModeSlidingPill({required this.left, required this.width});
+  final double left;
+  final double width;
+
+  @override
+  State<_ModeSlidingPill> createState() => _ModeSlidingPillState();
+}
+
+class _ModeSlidingPillState extends State<_ModeSlidingPill>
+    with SingleTickerProviderStateMixin {
+  // 临界阻尼弹簧：stiffness 246 → response ≈ 2π/√246 ≈ 0.40 s，无过冲。
+  // 临界阻尼 damping = 2√(stiffness·mass) ≈ 31.4。
+  // 与 dock 完全一致，连续切换不会跳变、不会过冲。
+  static const _spring = SpringDescription(
+    mass: 1,
+    stiffness: 246,
+    damping: 31.4,
+  );
+
+  late final AnimationController _ctrl;
+  double _left = 0;
+  double _width = 0;
+  // 本次弹簧的起点（屏幕当前值）与目标值。
+  double _fromLeft = 0, _toLeft = 0;
+  double _fromWidth = 0, _toWidth = 0;
+  bool _reduceMotion = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _left = widget.left;
+    _width = widget.width;
+    _ctrl = AnimationController.unbounded(vsync: this)
+      ..addListener(_onSpringTick);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 减少动态需在依赖就绪后读取（initState 内不允许查 MediaQuery）。
+    _reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+  }
+
+  @override
+  void didUpdateWidget(_ModeSlidingPill old) {
+    super.didUpdateWidget(old);
+    if (old.left == widget.left && old.width == widget.width) return;
+    if (_reduceMotion) {
+      // 减少动态：不做位移动画，直接落到目标位置。
+      _ctrl.stop();
+      _left = widget.left;
+      _width = widget.width;
+      setState(() {});
+      return;
+    }
+    // 从当前屏幕值（presentation value）出发向新目标弹簧运动。
+    // animateWith 会先停掉旧模拟再启动新模拟，快速连续切换也能
+    // 安全打断重定向，不会触发「Ticker 已激活」断言。
+    _fromLeft = _left;
+    _fromWidth = _width;
+    _toLeft = widget.left;
+    _toWidth = widget.width;
+    _ctrl.animateWith(SpringSimulation(_spring, 0, 1, 0));
+  }
+
+  void _onSpringTick() {
+    setState(() {
+      if (!_ctrl.isAnimating) {
+        // 弹簧收敛后精确落到目标，避免浮点残留。
+        _left = _toLeft;
+        _width = _toWidth;
+        return;
+      }
+      final t = _ctrl.value; // 0→1 弹簧进度（临界阻尼单调无过冲）。
+      _left = _fromLeft + (_toLeft - _fromLeft) * t;
+      _width = _fromWidth + (_toWidth - _fromWidth) * t;
+    });
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Positioned(
+      left: _left,
+      top: 0,
+      bottom: 0,
+      width: _width,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: scheme.primary,
+          borderRadius: BorderRadius.circular(999),
+          boxShadow: [
+            BoxShadow(
+              color: scheme.primary.withValues(alpha: 0.32),
+              blurRadius: 14,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 档位 cell：透明，仅负责点击 + 文字颜色翻转（选中→白）。背景与阴影不
+/// 在这里，完全交给 [_ModeSlidingPill]。
 class _ModePillCell extends StatelessWidget {
   const _ModePillCell({
     required this.value,
@@ -362,24 +518,10 @@ class _ModePillCell extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOutCubic,
+        child: Container(
           padding: const EdgeInsets.symmetric(vertical: 9),
           alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: active ? scheme.primary : Colors.transparent,
-            borderRadius: BorderRadius.circular(999),
-            boxShadow: active
-                ? [
-                    BoxShadow(
-                      color: scheme.primary.withValues(alpha: 0.32),
-                      blurRadius: 14,
-                      offset: const Offset(0, 6),
-                    )
-                  ]
-                : null,
-          ),
+          // 纯透明，背景由 [_ModeSlidingPill] 呈现。
           child: AnimatedDefaultTextStyle(
             duration: const Duration(milliseconds: 220),
             curve: Curves.easeOutCubic,
