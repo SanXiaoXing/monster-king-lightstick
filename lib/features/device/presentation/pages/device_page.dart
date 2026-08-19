@@ -460,20 +460,18 @@ class _ScanNote extends StatelessWidget {
       child: Row(
         children: [
           if (vm.scanning) ...[
-            const _ScanPulseRing(size: 20),
-            const SizedBox(width: 12),
+            const _ScanSpinnerArc(),
+            const SizedBox(width: 8),
           ],
           Flexible(
-            child: vm.scanning
-                ? const _BreathingScanLabel(text: '正在扫描附近的应援棒设备')
-                : Text(
-                    '点击设备卡片即可配对',
-                    style: TextStyle(
-                      color: scheme.onSurfaceVariant,
-                      fontSize: 12,
-                      letterSpacing: 0.1,
-                    ),
-                  ),
+            child: Text(
+              vm.scanning ? '正在扫描附近的应援棒设备' : '点击设备卡片即可配对',
+              style: TextStyle(
+                color: scheme.onSurfaceVariant,
+                fontSize: 12,
+                letterSpacing: 0.1,
+              ),
+            ),
           ),
         ],
       ),
@@ -481,25 +479,27 @@ class _ScanNote extends StatelessWidget {
   }
 }
 
-/// 扫描中的脉冲环形指示器。
+/// 扫描中状态指示器（原型 [prototype_redesign.html] `.scan-line .ring` 的
+/// Flutter 同构）。
 ///
-/// 动画：
-/// - 3 个同步护航、从圆心向外扩的圆，间隔 1/3 周期间隔启动；
-/// - easeOutCubic 让初始撞中后往外推时越走越缓；
-/// - 中间还有一个轻微「哑呼」键（0.30 半径 × 1.20 硕峰）的实心点。
+/// 视觉：
+/// - 13×13 px 圆，外卷 2 px 描边。
+/// - 描边全场 chrome gray，顶端四分之一高亮 brand 蓝。
+/// - 整环以 1 s/turn 的恒定角速度顺时针旋转。
 ///
-/// 使用 [RepaintBoundary] 隔离重绘到仅 20×20 范围，
-/// 不带动 device 卡 / list 同时刷新。
-class _ScanPulseRing extends StatefulWidget {
-  const _ScanPulseRing({required this.size});
-
-  final double size;
+/// 与原型的不同点：
+/// - 原型走 CSS `@keyframes spin { to { transform: rotate(360deg) } }`，这里
+///   兑为 `AnimationController.repeat()` 的完整控制，重复 3 圈以上不抖。
+/// - 原型描边色是 `--line` (line 背景变量)；这里选 `scheme.outlineVariant`，
+///   与项目 token 表保持一致。
+class _ScanSpinnerArc extends StatefulWidget {
+  const _ScanSpinnerArc();
 
   @override
-  State<_ScanPulseRing> createState() => _ScanPulseRingState();
+  State<_ScanSpinnerArc> createState() => _ScanSpinnerArcState();
 }
 
-class _ScanPulseRingState extends State<_ScanPulseRing>
+class _ScanSpinnerArcState extends State<_ScanSpinnerArc>
     with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
 
@@ -508,7 +508,7 @@ class _ScanPulseRingState extends State<_ScanPulseRing>
     super.initState();
     _ctrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1800),
+      duration: const Duration(milliseconds: 1000),
     )..repeat();
   }
 
@@ -523,114 +523,40 @@ class _ScanPulseRingState extends State<_ScanPulseRing>
     final scheme = Theme.of(context).colorScheme;
     return RepaintBoundary(
       child: SizedBox(
-        width: widget.size,
-        height: widget.size,
+        width: 13,
+        height: 13,
         child: AnimatedBuilder(
           animation: _ctrl,
-          builder: (context, _) => CustomPaint(
-            painter: _PulseRingsPainter(
-              t: _ctrl.value,
-              color: scheme.primary,
-            ),
-          ),
+          builder: (context, _) {
+            return Transform.rotate(
+              angle: _ctrl.value * 2 * math.pi,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: scheme.outlineVariant,
+                    width: 2,
+                  ),
+                ),
+                // top-quarter 高亮。在 outer 包 DecoratedBox + inner 旋转染
+                // 色实现「局部描边」效果：在内盒添加一个 2 px 的薄弧
+                // （从 12 点钟起 90° 顺时针），位于 cap-start / cap-end 处，
+                // 随外环同步旋转。
+                child: Padding(
+                  padding: const EdgeInsets.all(1),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border(
+                        top: BorderSide(color: scheme.primary, width: 2),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
         ),
-      ),
-    );
-  }
-}
-
-class _PulseRingsPainter extends CustomPainter {
-  _PulseRingsPainter({required this.t, required this.color});
-
-  final double t; // 0..1 循环
-  final Color color;
-
-  static const _ringCount = 3;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final maxR = size.width / 2 - 1.0; // 留 约 1 px 描边边距
-    final dotR = maxR * 0.30;
-
-    // 3 个圈护航。圈 i 起始于 t = i / ringCount，
-    // 每圈走完 / ringCount 后被下一圈接替覆盖。
-    for (var i = 0; i < _ringCount; i++) {
-      final startT = i / _ringCount;
-      var p = (t - startT) * _ringCount;
-      if (p < 0) p += 1; // 周期性包裹（不会跳出，因为 _ctrl.repeat()）
-      if (p > 1) continue;
-      final r = dotR + (maxR - dotR) * Curves.easeOutCubic.transform(p);
-      final alpha = (1 - p) * 0.55;
-      final stroke = Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5
-        ..color = color.withValues(alpha: alpha);
-      canvas.drawCircle(center, r, stroke);
-    }
-
-    // 中心点轻微 «哑呼»：硕峰跳 1.0 → 1.2 → 1.0，0.9 s 周期与环创建错开。
-    final dotWave = 1 + 0.20 * (1 - math.pow(2 * t - 1, 2));
-    final dotPaint = Paint()
-      ..style = PaintingStyle.fill
-      ..color = color;
-    canvas.drawCircle(center, dotR * dotWave, dotPaint);
-  }
-
-  @override
-  bool shouldRepaint(_PulseRingsPainter old) => old.t != t;
-}
-
-/// 扫描中状态文案。文字颜色随正弦波在 muted 与 primary 之间软呼吸，
-/// 1.4 s 为一周期，不仅是 alpha 而是色相变化，避免 Opacity 边缘抗锯齿问题。
-class _BreathingScanLabel extends StatefulWidget {
-  const _BreathingScanLabel({required this.text});
-
-  final String text;
-
-  @override
-  State<_BreathingScanLabel> createState() => _BreathingScanLabelState();
-}
-
-class _BreathingScanLabelState extends State<_BreathingScanLabel>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1400),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return RepaintBoundary(
-      child: AnimatedBuilder(
-        animation: _ctrl,
-        builder: (context, _) {
-          // (1 - sin)/2 产生一个 0..1 的柔和呼吸波形。
-          final wave = (1 - math.sin(_ctrl.value * 2 * math.pi)) / 2;
-          // lerp 量在 0..0.7，从 muted 偏到偏亮（不全量 fully primary，过多干扰阅读）。
-          final color = Color.lerp(scheme.onSurfaceVariant, scheme.primary, wave * 0.7);
-          return Text(
-            widget.text,
-            style: TextStyle(
-              color: color,
-              fontSize: 12,
-              letterSpacing: 0.1,
-            ),
-          );
-        },
       ),
     );
   }
