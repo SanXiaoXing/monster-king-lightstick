@@ -56,3 +56,11 @@ flutter run
 - 金标准：`LIGHT_FLASH_HEX = 02000000100004ff020c06104c6a5e52`（真机抓包）
 
 完整规格：[docs/protocol/PROTOCOL.md](docs/protocol/PROTOCOL.md)
+
+## 许可协议
+
+本仓库（monster-king-lightstick）以
+[知识共享 署名-非商业性使用-相同方式共享 4.0 国际（CC BY-NC-SA 4.0）](https://creativecommons.org/licenses/by-nc-sa/4.0/)
+许可协议发布，版权归 SanXiaoXing 所有。详见 [LICENSE](LICENSE)。
+
+> 本许可不涵盖商标权。「宝宝剑」™ 为官方品牌商标，本项目为非官方个人项目。

@@ -233,18 +233,6 @@ class AboutPage extends StatelessWidget {
               ),
             ),
           ),
-
-          const SizedBox(height: 5),
-
-          Center(
-            child: Text(
-              '宝宝剑™ 为官方品牌商标 · 非官方个人项目',
-              style: TextStyle(
-                color: scheme.onSurfaceVariant,
-                fontSize: 11,
-              ),
-            ),
-          ),
         ],
       ),
     );
@@ -263,31 +251,14 @@ class AboutPage extends StatelessWidget {
           size: const Size(52, 96),
         ),
         const SizedBox(height: 18),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              appName,
-              style: TextStyle(
-                color: scheme.onSurface,
-                fontSize: 30,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 1,
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(top: 5, left: 2),
-              child: Text(
-                '™',
-                style: TextStyle(
-                  color: scheme.onSurfaceVariant,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ],
+        Text(
+          appName,
+          style: TextStyle(
+            color: scheme.onSurface,
+            fontSize: 30,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1,
+          ),
         ),
         const SizedBox(height: 7),
         Container(
