@@ -118,7 +118,12 @@ class _ColorPickerPageState extends State<ColorPickerPage> {
   Future<void> _send(LightingFx fx,
       {bool announce = false, bool silentErrors = false}) async {
     final device = widget.viewModel.activeDevice;
-    if (device == null || !_ensureConnected()) return;
+    if (device == null) {
+      // 无设备：主动操作（点选灯效）弹守卫提示；拖动实时下发静默
+      if (!silentErrors) _ensureConnected();
+      return;
+    }
+    if (!_ensureConnected()) return;
     try {
       await _repo.sendEffect(
         device,

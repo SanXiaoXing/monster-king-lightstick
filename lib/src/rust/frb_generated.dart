@@ -3,6 +3,8 @@
 
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
+import 'api/audio.dart';
+import 'api/lightstick.dart';
 import 'api/protocol.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -69,7 +71,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
                   String get codegenVersion => '2.12.0';
 
                   @override
-                  int get rustContentHash => -1207780410;
+                  int get rustContentHash => -988255866;
 
                   static const kDefaultExternalLibraryLoaderConfig = ExternalLibraryLoaderConfig(
                     stem: 'wan_protocol_frb',
@@ -81,7 +83,21 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
                 
 
                 abstract class RustLibApi extends BaseApi {
-                  Future<Uint8List> crateApiProtocolAntifakeInstruction({required int seq , required String macHex , required List<int> random16 });
+                  Future<MusicRhythm> crateApiLightstickMusicRhythmCreate();
+
+Future<LightOutput> crateApiLightstickMusicRhythmNext({required MusicRhythm that , required AudioFrame frame });
+
+Future<void> crateApiLightstickMusicRhythmSetBaseColor({required MusicRhythm that , required List<int> rgb });
+
+Future<void> crateApiLightstickMusicRhythmSetMode({required MusicRhythm that , required RhythmMode mode });
+
+Future<void> crateApiLightstickMusicRhythmSetSensitivity({required MusicRhythm that , required double v });
+
+Future<PcmAnalyzer> crateApiAudioPcmAnalyzerCreate();
+
+Future<List<AudioFrame>> crateApiAudioPcmAnalyzerPush({required PcmAnalyzer that , required List<int> chunk });
+
+Future<Uint8List> crateApiProtocolAntifakeInstruction({required int seq , required String macHex , required List<int> random16 });
 
 Future<String> crateApiProtocolApiAesDecryptHex({required String ciphertextHex });
 
@@ -131,6 +147,18 @@ Future<String> crateApiProtocolSeatWriteHex({int? lightArea , required int x1 , 
 
 Future<bool> crateApiProtocolVerifyAntifake({required List<int> message , required List<int> signature , required List<int> publicKey });
 
+RustArcIncrementStrongCountFnType get rust_arc_increment_strong_count_MusicRhythm;
+
+RustArcDecrementStrongCountFnType get rust_arc_decrement_strong_count_MusicRhythm;
+
+CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_MusicRhythmPtr;
+
+RustArcIncrementStrongCountFnType get rust_arc_increment_strong_count_PcmAnalyzer;
+
+RustArcDecrementStrongCountFnType get rust_arc_decrement_strong_count_PcmAnalyzer;
+
+CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_PcmAnalyzerPtr;
+
 
                 }
                 
@@ -143,13 +171,193 @@ Future<bool> crateApiProtocolVerifyAntifake({required List<int> message , requir
                     required super.portManager,
                   });
 
-                  @override Future<Uint8List> crateApiProtocolAntifakeInstruction({required int seq , required String macHex , required List<int> random16 })  { return handler.executeNormal(NormalTask(
+                  @override Future<MusicRhythm> crateApiLightstickMusicRhythmCreate()  { return handler.executeNormal(NormalTask(
+            callFfi: (port_) {
+              
+            final serializer = SseSerializer(generalizedFrbRustBinding);
+            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 1, port: port_);
+            
+            },
+            codec: 
+        SseCodec(
+          decodeSuccessData: sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMusicRhythm,
+          decodeErrorData: null,
+        )
+        ,
+            constMeta: kCrateApiLightstickMusicRhythmCreateConstMeta,
+            argValues: [],
+            apiImpl: this,
+        )); }
+
+
+        TaskConstMeta get kCrateApiLightstickMusicRhythmCreateConstMeta => const TaskConstMeta(
+            debugName: "MusicRhythm_create",
+            argNames: [],
+        );
+        
+
+@override Future<LightOutput> crateApiLightstickMusicRhythmNext({required MusicRhythm that , required AudioFrame frame })  { return handler.executeNormal(NormalTask(
+            callFfi: (port_) {
+              
+            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMusicRhythm(that, serializer);
+sse_encode_box_autoadd_audio_frame(frame, serializer);
+            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 2, port: port_);
+            
+            },
+            codec: 
+        SseCodec(
+          decodeSuccessData: sse_decode_light_output,
+          decodeErrorData: null,
+        )
+        ,
+            constMeta: kCrateApiLightstickMusicRhythmNextConstMeta,
+            argValues: [that, frame],
+            apiImpl: this,
+        )); }
+
+
+        TaskConstMeta get kCrateApiLightstickMusicRhythmNextConstMeta => const TaskConstMeta(
+            debugName: "MusicRhythm_next",
+            argNames: ["that", "frame"],
+        );
+        
+
+@override Future<void> crateApiLightstickMusicRhythmSetBaseColor({required MusicRhythm that , required List<int> rgb })  { return handler.executeNormal(NormalTask(
+            callFfi: (port_) {
+              
+            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMusicRhythm(that, serializer);
+sse_encode_list_prim_u_8_loose(rgb, serializer);
+            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 3, port: port_);
+            
+            },
+            codec: 
+        SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        )
+        ,
+            constMeta: kCrateApiLightstickMusicRhythmSetBaseColorConstMeta,
+            argValues: [that, rgb],
+            apiImpl: this,
+        )); }
+
+
+        TaskConstMeta get kCrateApiLightstickMusicRhythmSetBaseColorConstMeta => const TaskConstMeta(
+            debugName: "MusicRhythm_set_base_color",
+            argNames: ["that", "rgb"],
+        );
+        
+
+@override Future<void> crateApiLightstickMusicRhythmSetMode({required MusicRhythm that , required RhythmMode mode })  { return handler.executeNormal(NormalTask(
+            callFfi: (port_) {
+              
+            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMusicRhythm(that, serializer);
+sse_encode_rhythm_mode(mode, serializer);
+            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 4, port: port_);
+            
+            },
+            codec: 
+        SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        )
+        ,
+            constMeta: kCrateApiLightstickMusicRhythmSetModeConstMeta,
+            argValues: [that, mode],
+            apiImpl: this,
+        )); }
+
+
+        TaskConstMeta get kCrateApiLightstickMusicRhythmSetModeConstMeta => const TaskConstMeta(
+            debugName: "MusicRhythm_set_mode",
+            argNames: ["that", "mode"],
+        );
+        
+
+@override Future<void> crateApiLightstickMusicRhythmSetSensitivity({required MusicRhythm that , required double v })  { return handler.executeNormal(NormalTask(
+            callFfi: (port_) {
+              
+            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMusicRhythm(that, serializer);
+sse_encode_f_64(v, serializer);
+            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 5, port: port_);
+            
+            },
+            codec: 
+        SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        )
+        ,
+            constMeta: kCrateApiLightstickMusicRhythmSetSensitivityConstMeta,
+            argValues: [that, v],
+            apiImpl: this,
+        )); }
+
+
+        TaskConstMeta get kCrateApiLightstickMusicRhythmSetSensitivityConstMeta => const TaskConstMeta(
+            debugName: "MusicRhythm_set_sensitivity",
+            argNames: ["that", "v"],
+        );
+        
+
+@override Future<PcmAnalyzer> crateApiAudioPcmAnalyzerCreate()  { return handler.executeNormal(NormalTask(
+            callFfi: (port_) {
+              
+            final serializer = SseSerializer(generalizedFrbRustBinding);
+            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 6, port: port_);
+            
+            },
+            codec: 
+        SseCodec(
+          decodeSuccessData: sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPcmAnalyzer,
+          decodeErrorData: null,
+        )
+        ,
+            constMeta: kCrateApiAudioPcmAnalyzerCreateConstMeta,
+            argValues: [],
+            apiImpl: this,
+        )); }
+
+
+        TaskConstMeta get kCrateApiAudioPcmAnalyzerCreateConstMeta => const TaskConstMeta(
+            debugName: "PcmAnalyzer_create",
+            argNames: [],
+        );
+        
+
+@override Future<List<AudioFrame>> crateApiAudioPcmAnalyzerPush({required PcmAnalyzer that , required List<int> chunk })  { return handler.executeNormal(NormalTask(
+            callFfi: (port_) {
+              
+            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPcmAnalyzer(that, serializer);
+sse_encode_list_prim_u_8_loose(chunk, serializer);
+            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 7, port: port_);
+            
+            },
+            codec: 
+        SseCodec(
+          decodeSuccessData: sse_decode_list_audio_frame,
+          decodeErrorData: null,
+        )
+        ,
+            constMeta: kCrateApiAudioPcmAnalyzerPushConstMeta,
+            argValues: [that, chunk],
+            apiImpl: this,
+        )); }
+
+
+        TaskConstMeta get kCrateApiAudioPcmAnalyzerPushConstMeta => const TaskConstMeta(
+            debugName: "PcmAnalyzer_push",
+            argNames: ["that", "chunk"],
+        );
+        
+
+@override Future<Uint8List> crateApiProtocolAntifakeInstruction({required int seq , required String macHex , required List<int> random16 })  { return handler.executeNormal(NormalTask(
             callFfi: (port_) {
               
             final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_u_32(seq, serializer);
 sse_encode_String(macHex, serializer);
 sse_encode_list_prim_u_8_loose(random16, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 1, port: port_);
+            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 8, port: port_);
             
             },
             codec: 
@@ -174,7 +382,7 @@ sse_encode_list_prim_u_8_loose(random16, serializer);
             callFfi: (port_) {
               
             final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_String(ciphertextHex, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 2, port: port_);
+            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 9, port: port_);
             
             },
             codec: 
@@ -199,7 +407,7 @@ sse_encode_list_prim_u_8_loose(random16, serializer);
             callFfi: (port_) {
               
             final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_String(plaintext, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 3, port: port_);
+            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 10, port: port_);
             
             },
             codec: 
@@ -229,7 +437,7 @@ sse_encode_u_8(region, serializer);
 sse_encode_u_16(x0, serializer);
 sse_encode_u_16(y0, serializer);
 sse_encode_u_8(show_, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 4, port: port_);
+            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 11, port: port_);
             
             },
             codec: 
@@ -259,7 +467,7 @@ sse_encode_u_8(region, serializer);
 sse_encode_u_16(x0, serializer);
 sse_encode_u_16(y0, serializer);
 sse_encode_u_8(show_, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 5, port: port_);
+            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 12, port: port_);
             
             },
             codec: 
@@ -285,7 +493,7 @@ sse_encode_u_8(show_, serializer);
               
             final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_u_32(offset, serializer);
 sse_encode_list_prim_u_8_loose(chunk, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 6, port: port_);
+            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13, port: port_);
             
             },
             codec: 
@@ -310,7 +518,7 @@ sse_encode_list_prim_u_8_loose(chunk, serializer);
             callFfi: (port_) {
               
             final serializer = SseSerializer(generalizedFrbRustBinding);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 7, port: port_);
+            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 14, port: port_);
             
             },
             codec: 
@@ -335,7 +543,7 @@ sse_encode_list_prim_u_8_loose(chunk, serializer);
             callFfi: (port_) {
               
             final serializer = SseSerializer(generalizedFrbRustBinding);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 8, port: port_);
+            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 15, port: port_);
             
             },
             codec: 
@@ -361,7 +569,7 @@ sse_encode_list_prim_u_8_loose(chunk, serializer);
               
             final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_u_32(seq, serializer);
 sse_encode_String(commandBodyHex, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 9, port: port_);
+            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 16, port: port_);
             
             },
             codec: 
@@ -386,7 +594,7 @@ sse_encode_String(commandBodyHex, serializer);
             callFfi: (port_) {
               
             final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_list_prim_u_8_loose(bytes, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 10, port: port_);
+            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 17, port: port_);
             
             },
             codec: 
@@ -411,7 +619,7 @@ sse_encode_String(commandBodyHex, serializer);
             callFfi: (port_) {
               
             final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_String(hex, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 11, port: port_);
+            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 18, port: port_);
             
             },
             codec: 
@@ -436,7 +644,7 @@ sse_encode_String(commandBodyHex, serializer);
             callFfi: (port_) {
               
             final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_list_prim_u_8_loose(data, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 12, port: port_);
+            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 19, port: port_);
             
             },
             codec: 
@@ -462,7 +670,7 @@ sse_encode_String(commandBodyHex, serializer);
               
             final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_u_64(n, serializer);
 sse_encode_u_32(width, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13, port: port_);
+            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 20, port: port_);
             
             },
             codec: 
@@ -487,7 +695,7 @@ sse_encode_u_32(width, serializer);
             callFfi: (port_) {
               
             final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_u_32(seq, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 14, port: port_);
+            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 21, port: port_);
             
             },
             codec: 
@@ -512,7 +720,7 @@ sse_encode_u_32(width, serializer);
             callFfi: (port_) {
               
             final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_String(hex, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 15, port: port_);
+            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 22, port: port_);
             
             },
             codec: 
@@ -537,7 +745,7 @@ sse_encode_u_32(width, serializer);
             callFfi: (port_) {
               
             final serializer = SseSerializer(generalizedFrbRustBinding);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 16, port: port_);
+            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 23, port: port_);
             
             },
             codec: 
@@ -562,7 +770,7 @@ sse_encode_u_32(width, serializer);
             callFfi: (port_) {
               
             final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_list_prim_u_8_loose(data, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 17, port: port_);
+            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 24, port: port_);
             
             },
             codec: 
@@ -587,7 +795,7 @@ sse_encode_u_32(width, serializer);
             callFfi: (port_) {
               
             final serializer = SseSerializer(generalizedFrbRustBinding);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 18, port: port_);
+            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 25, port: port_);
             
             },
             codec: 
@@ -614,7 +822,7 @@ sse_encode_u_32(width, serializer);
             final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_lighting_effect(effect, serializer);
 sse_encode_String(colorHex, serializer);
 sse_encode_u_8(seed, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 19, port: port_);
+            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 26, port: port_);
             
             },
             codec: 
@@ -639,7 +847,7 @@ sse_encode_u_8(seed, serializer);
             callFfi: (port_) {
               
             final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_String(hex, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 20, port: port_);
+            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 27, port: port_);
             
             },
             codec: 
@@ -664,7 +872,7 @@ sse_encode_u_8(seed, serializer);
             callFfi: (port_) {
               
             final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_String(b64, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 21, port: port_);
+            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 28, port: port_);
             
             },
             codec: 
@@ -689,7 +897,7 @@ sse_encode_u_8(seed, serializer);
             callFfi: (port_) {
               
             final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_String(plaintext, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 22, port: port_);
+            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 29, port: port_);
             
             },
             codec: 
@@ -714,7 +922,7 @@ sse_encode_u_8(seed, serializer);
             callFfi: (port_) {
               
             final serializer = SseSerializer(generalizedFrbRustBinding);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 23, port: port_);
+            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 30, port: port_);
             
             },
             codec: 
@@ -742,7 +950,7 @@ sse_encode_u_8(seed, serializer);
 sse_encode_u_16(x1, serializer);
 sse_encode_u_16(y1, serializer);
 sse_encode_opt_box_autoadd_u_8(showNum, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 24, port: port_);
+            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 31, port: port_);
             
             },
             codec: 
@@ -769,7 +977,7 @@ sse_encode_opt_box_autoadd_u_8(showNum, serializer);
             final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_list_prim_u_8_loose(message, serializer);
 sse_encode_list_prim_u_8_loose(signature, serializer);
 sse_encode_list_prim_u_8_loose(publicKey, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 25, port: port_);
+            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 32, port: port_);
             
             },
             codec: 
@@ -790,16 +998,57 @@ sse_encode_list_prim_u_8_loose(publicKey, serializer);
         );
         
 
+RustArcIncrementStrongCountFnType get rust_arc_increment_strong_count_MusicRhythm => wire.rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMusicRhythm;
+
+RustArcDecrementStrongCountFnType get rust_arc_decrement_strong_count_MusicRhythm => wire.rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMusicRhythm;
+
+RustArcIncrementStrongCountFnType get rust_arc_increment_strong_count_PcmAnalyzer => wire.rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPcmAnalyzer;
+
+RustArcDecrementStrongCountFnType get rust_arc_decrement_strong_count_PcmAnalyzer => wire.rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPcmAnalyzer;
 
 
-                  @protected String dco_decode_String(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
+
+                  @protected MusicRhythm dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMusicRhythm(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
+return MusicRhythmImpl.frbInternalDcoDecode(raw as List<dynamic>); }
+
+@protected PcmAnalyzer dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPcmAnalyzer(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
+return PcmAnalyzerImpl.frbInternalDcoDecode(raw as List<dynamic>); }
+
+@protected MusicRhythm dco_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMusicRhythm(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
+return MusicRhythmImpl.frbInternalDcoDecode(raw as List<dynamic>); }
+
+@protected PcmAnalyzer dco_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPcmAnalyzer(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
+return PcmAnalyzerImpl.frbInternalDcoDecode(raw as List<dynamic>); }
+
+@protected MusicRhythm dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMusicRhythm(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
+return MusicRhythmImpl.frbInternalDcoDecode(raw as List<dynamic>); }
+
+@protected PcmAnalyzer dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPcmAnalyzer(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
+return PcmAnalyzerImpl.frbInternalDcoDecode(raw as List<dynamic>); }
+
+@protected String dco_decode_String(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
 return raw as String; }
+
+@protected AudioFrame dco_decode_audio_frame(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
+final arr = raw as List<dynamic>;
+                if (arr.length != 5) throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+                return AudioFrame(volume: dco_decode_f_64(arr[0]),
+bands: dco_decode_list_prim_f_64_strict(arr[1]),
+bass: dco_decode_f_64(arr[2]),
+treble: dco_decode_f_64(arr[3]),
+isBeat: dco_decode_bool(arr[4]),); }
 
 @protected bool dco_decode_bool(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
 return raw as bool; }
 
+@protected AudioFrame dco_decode_box_autoadd_audio_frame(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
+return dco_decode_audio_frame(raw); }
+
 @protected int dco_decode_box_autoadd_u_8(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
 return raw as int; }
+
+@protected double dco_decode_f_64(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
+return raw as double; }
 
 @protected int dco_decode_i_32(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
 return raw as int; }
@@ -810,11 +1059,23 @@ final arr = raw as List<dynamic>;
                 return IosBroadcastResult(frmcnt: dco_decode_u_8(arr[0]),
 data: dco_decode_list_prim_u_8_strict(arr[1]),); }
 
+@protected LightOutput dco_decode_light_output(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
+final arr = raw as List<dynamic>;
+                if (arr.length != 2) throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+                return LightOutput(rgb: dco_decode_list_prim_u_8_strict(arr[0]),
+brightness: dco_decode_f_64(arr[1]),); }
+
 @protected LightingEffect dco_decode_lighting_effect(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
 return LightingEffect.values[raw as int]; }
 
 @protected List<String> dco_decode_list_String(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
 return (raw as List<dynamic>).map(dco_decode_String).toList(); }
+
+@protected List<AudioFrame> dco_decode_list_audio_frame(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
+return (raw as List<dynamic>).map(dco_decode_audio_frame).toList(); }
+
+@protected Float64List dco_decode_list_prim_f_64_strict(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
+return raw as Float64List; }
 
 @protected List<int> dco_decode_list_prim_u_8_loose(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
 return raw as List<int>; }
@@ -824,6 +1085,9 @@ return raw as Uint8List; }
 
 @protected int? dco_decode_opt_box_autoadd_u_8(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
 return raw == null ? null : dco_decode_box_autoadd_u_8(raw); }
+
+@protected RhythmMode dco_decode_rhythm_mode(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
+return RhythmMode.values[raw as int]; }
 
 @protected int dco_decode_u_16(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
 return raw as int; }
@@ -840,6 +1104,9 @@ return raw as int; }
 @protected void dco_decode_unit(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
 return; }
 
+@protected BigInt dco_decode_usize(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
+return dcoDecodeU64(raw); }
+
 @protected WanError dco_decode_wan_error(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
 switch (raw[0]) {
                 case 0: return WanError_Protocol(dco_decode_String(raw[1]),);
@@ -849,15 +1116,47 @@ case 3: return WanError_Invalid(dco_decode_String(raw[1]),);
                 default: throw Exception("unreachable");
             } }
 
+@protected MusicRhythm sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMusicRhythm(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
+return MusicRhythmImpl.frbInternalSseDecode(sse_decode_usize(deserializer), sse_decode_i_32(deserializer)); }
+
+@protected PcmAnalyzer sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPcmAnalyzer(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
+return PcmAnalyzerImpl.frbInternalSseDecode(sse_decode_usize(deserializer), sse_decode_i_32(deserializer)); }
+
+@protected MusicRhythm sse_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMusicRhythm(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
+return MusicRhythmImpl.frbInternalSseDecode(sse_decode_usize(deserializer), sse_decode_i_32(deserializer)); }
+
+@protected PcmAnalyzer sse_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPcmAnalyzer(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
+return PcmAnalyzerImpl.frbInternalSseDecode(sse_decode_usize(deserializer), sse_decode_i_32(deserializer)); }
+
+@protected MusicRhythm sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMusicRhythm(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
+return MusicRhythmImpl.frbInternalSseDecode(sse_decode_usize(deserializer), sse_decode_i_32(deserializer)); }
+
+@protected PcmAnalyzer sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPcmAnalyzer(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
+return PcmAnalyzerImpl.frbInternalSseDecode(sse_decode_usize(deserializer), sse_decode_i_32(deserializer)); }
+
 @protected String sse_decode_String(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
 var inner = sse_decode_list_prim_u_8_strict(deserializer);
         return utf8.decoder.convert(inner); }
 
+@protected AudioFrame sse_decode_audio_frame(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
+var var_volume = sse_decode_f_64(deserializer);
+var var_bands = sse_decode_list_prim_f_64_strict(deserializer);
+var var_bass = sse_decode_f_64(deserializer);
+var var_treble = sse_decode_f_64(deserializer);
+var var_isBeat = sse_decode_bool(deserializer);
+return AudioFrame(volume: var_volume, bands: var_bands, bass: var_bass, treble: var_treble, isBeat: var_isBeat); }
+
 @protected bool sse_decode_bool(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
 return deserializer.buffer.getUint8() != 0; }
 
+@protected AudioFrame sse_decode_box_autoadd_audio_frame(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
+return (sse_decode_audio_frame(deserializer)); }
+
 @protected int sse_decode_box_autoadd_u_8(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
 return (sse_decode_u_8(deserializer)); }
+
+@protected double sse_decode_f_64(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
+return deserializer.buffer.getFloat64(); }
 
 @protected int sse_decode_i_32(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
 return deserializer.buffer.getInt32(); }
@@ -866,6 +1165,11 @@ return deserializer.buffer.getInt32(); }
 var var_frmcnt = sse_decode_u_8(deserializer);
 var var_data = sse_decode_list_prim_u_8_strict(deserializer);
 return IosBroadcastResult(frmcnt: var_frmcnt, data: var_data); }
+
+@protected LightOutput sse_decode_light_output(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
+var var_rgb = sse_decode_list_prim_u_8_strict(deserializer);
+var var_brightness = sse_decode_f_64(deserializer);
+return LightOutput(rgb: var_rgb, brightness: var_brightness); }
 
 @protected LightingEffect sse_decode_lighting_effect(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
 var inner = sse_decode_i_32(deserializer);
@@ -878,6 +1182,18 @@ var inner = sse_decode_i_32(deserializer);
         for (var idx_ = 0; idx_ < len_; ++idx_) { ans_.add(sse_decode_String(deserializer)); }
         return ans_;
          }
+
+@protected List<AudioFrame> sse_decode_list_audio_frame(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
+
+        var len_ = sse_decode_i_32(deserializer);
+        var ans_ = <AudioFrame>[];
+        for (var idx_ = 0; idx_ < len_; ++idx_) { ans_.add(sse_decode_audio_frame(deserializer)); }
+        return ans_;
+         }
+
+@protected Float64List sse_decode_list_prim_f_64_strict(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
+var len_ = sse_decode_i_32(deserializer);
+                return deserializer.buffer.getFloat64List(len_); }
 
 @protected List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
 var len_ = sse_decode_i_32(deserializer);
@@ -896,6 +1212,10 @@ var len_ = sse_decode_i_32(deserializer);
             }
              }
 
+@protected RhythmMode sse_decode_rhythm_mode(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
+var inner = sse_decode_i_32(deserializer);
+        return RhythmMode.values[inner]; }
+
 @protected int sse_decode_u_16(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
 return deserializer.buffer.getUint16(); }
 
@@ -911,6 +1231,9 @@ return deserializer.buffer.getUint8(); }
 @protected void sse_decode_unit(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
  }
 
+@protected BigInt sse_decode_usize(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
+return deserializer.buffer.getBigUint64(); }
+
 @protected WanError sse_decode_wan_error(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
 
             var tag_ = sse_decode_i_32(deserializer);
@@ -921,14 +1244,46 @@ return WanError_Audio(var_field0);case 3: var var_field0 = sse_decode_String(des
 return WanError_Invalid(var_field0); default: throw UnimplementedError(''); }
              }
 
+@protected void sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMusicRhythm(MusicRhythm self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
+sse_encode_usize((self as MusicRhythmImpl).frbInternalSseEncode(move: true), serializer); }
+
+@protected void sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPcmAnalyzer(PcmAnalyzer self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
+sse_encode_usize((self as PcmAnalyzerImpl).frbInternalSseEncode(move: true), serializer); }
+
+@protected void sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMusicRhythm(MusicRhythm self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
+sse_encode_usize((self as MusicRhythmImpl).frbInternalSseEncode(move: false), serializer); }
+
+@protected void sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPcmAnalyzer(PcmAnalyzer self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
+sse_encode_usize((self as PcmAnalyzerImpl).frbInternalSseEncode(move: false), serializer); }
+
+@protected void sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMusicRhythm(MusicRhythm self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
+sse_encode_usize((self as MusicRhythmImpl).frbInternalSseEncode(move: null), serializer); }
+
+@protected void sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPcmAnalyzer(PcmAnalyzer self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
+sse_encode_usize((self as PcmAnalyzerImpl).frbInternalSseEncode(move: null), serializer); }
+
 @protected void sse_encode_String(String self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
 sse_encode_list_prim_u_8_strict(utf8.encoder.convert(self), serializer); }
+
+@protected void sse_encode_audio_frame(AudioFrame self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
+sse_encode_f_64(self.volume, serializer);
+sse_encode_list_prim_f_64_strict(self.bands, serializer);
+sse_encode_f_64(self.bass, serializer);
+sse_encode_f_64(self.treble, serializer);
+sse_encode_bool(self.isBeat, serializer);
+ }
 
 @protected void sse_encode_bool(bool self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
 serializer.buffer.putUint8(self ? 1 : 0); }
 
+@protected void sse_encode_box_autoadd_audio_frame(AudioFrame self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
+sse_encode_audio_frame(self, serializer); }
+
 @protected void sse_encode_box_autoadd_u_8(int self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
 sse_encode_u_8(self, serializer); }
+
+@protected void sse_encode_f_64(double self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
+serializer.buffer.putFloat64(self); }
 
 @protected void sse_encode_i_32(int self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
 serializer.buffer.putInt32(self); }
@@ -938,12 +1293,25 @@ sse_encode_u_8(self.frmcnt, serializer);
 sse_encode_list_prim_u_8_strict(self.data, serializer);
  }
 
+@protected void sse_encode_light_output(LightOutput self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
+sse_encode_list_prim_u_8_strict(self.rgb, serializer);
+sse_encode_f_64(self.brightness, serializer);
+ }
+
 @protected void sse_encode_lighting_effect(LightingEffect self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
 sse_encode_i_32(self.index, serializer); }
 
 @protected void sse_encode_list_String(List<String> self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
 sse_encode_i_32(self.length, serializer);
         for (final item in self) { sse_encode_String(item, serializer); } }
+
+@protected void sse_encode_list_audio_frame(List<AudioFrame> self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
+sse_encode_i_32(self.length, serializer);
+        for (final item in self) { sse_encode_audio_frame(item, serializer); } }
+
+@protected void sse_encode_list_prim_f_64_strict(Float64List self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
+sse_encode_i_32(self.length, serializer);
+                    serializer.buffer.putFloat64List(self); }
 
 @protected void sse_encode_list_prim_u_8_loose(List<int> self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
 sse_encode_i_32(self.length, serializer);
@@ -961,6 +1329,9 @@ sse_encode_i_32(self.length, serializer);
                 }
                  }
 
+@protected void sse_encode_rhythm_mode(RhythmMode self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
+sse_encode_i_32(self.index, serializer); }
+
 @protected void sse_encode_u_16(int self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
 serializer.buffer.putUint16(self); }
 
@@ -976,6 +1347,9 @@ serializer.buffer.putUint8(self); }
 @protected void sse_encode_unit(void self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
  }
 
+@protected void sse_encode_usize(BigInt self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
+serializer.buffer.putBigUint64(self); }
+
 @protected void sse_encode_wan_error(WanError self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
 switch (self) { case WanError_Protocol(field0: final field0): sse_encode_i_32(0, serializer); sse_encode_String(field0, serializer);
 case WanError_Bluetooth(field0: final field0): sse_encode_i_32(1, serializer); sse_encode_String(field0, serializer);
@@ -984,3 +1358,55 @@ case WanError_Invalid(field0: final field0): sse_encode_i_32(3, serializer); sse
   } }
                 }
                 
+
+            @sealed class MusicRhythmImpl extends RustOpaque implements MusicRhythm {
+                // Not to be used by end users
+                MusicRhythmImpl.frbInternalDcoDecode(List<dynamic> wire):
+                    super.frbInternalDcoDecode(wire, _kStaticData);
+
+                // Not to be used by end users
+                MusicRhythmImpl.frbInternalSseDecode(BigInt ptr, int externalSizeOnNative):
+                    super.frbInternalSseDecode(ptr, externalSizeOnNative, _kStaticData);
+
+                static final _kStaticData = RustArcStaticData(
+                    rustArcIncrementStrongCount: RustLib.instance.api.rust_arc_increment_strong_count_MusicRhythm,
+                    rustArcDecrementStrongCount: RustLib.instance.api.rust_arc_decrement_strong_count_MusicRhythm,
+                    rustArcDecrementStrongCountPtr: RustLib.instance.api.rust_arc_decrement_strong_count_MusicRhythmPtr,
+                );
+
+                /// 由音频帧推进一步，返回应下发的颜色与亮度。
+ Future<LightOutput>  next({required AudioFrame frame })=>RustLib.instance.api.crateApiLightstickMusicRhythmNext(that: this, frame: frame);
+
+
+/// 单色律动的固定颜色（RGB 3 字节）。
+ Future<void>  setBaseColor({required List<int> rgb })=>RustLib.instance.api.crateApiLightstickMusicRhythmSetBaseColor(that: this, rgb: rgb);
+
+
+ Future<void>  setMode({required RhythmMode mode })=>RustLib.instance.api.crateApiLightstickMusicRhythmSetMode(that: this, mode: mode);
+
+
+/// 灵敏度 0..1（亮度 = 音量 × 灵敏度）。
+ Future<void>  setSensitivity({required double v })=>RustLib.instance.api.crateApiLightstickMusicRhythmSetSensitivity(that: this, v: v);
+
+
+            }
+            @sealed class PcmAnalyzerImpl extends RustOpaque implements PcmAnalyzer {
+                // Not to be used by end users
+                PcmAnalyzerImpl.frbInternalDcoDecode(List<dynamic> wire):
+                    super.frbInternalDcoDecode(wire, _kStaticData);
+
+                // Not to be used by end users
+                PcmAnalyzerImpl.frbInternalSseDecode(BigInt ptr, int externalSizeOnNative):
+                    super.frbInternalSseDecode(ptr, externalSizeOnNative, _kStaticData);
+
+                static final _kStaticData = RustArcStaticData(
+                    rustArcIncrementStrongCount: RustLib.instance.api.rust_arc_increment_strong_count_PcmAnalyzer,
+                    rustArcDecrementStrongCount: RustLib.instance.api.rust_arc_decrement_strong_count_PcmAnalyzer,
+                    rustArcDecrementStrongCountPtr: RustLib.instance.api.rust_arc_decrement_strong_count_PcmAnalyzerPtr,
+                );
+
+                /// 喂入 PCM16 小端字节流，返回本次新产生的全部分析帧。
+ Future<List<AudioFrame>>  push({required List<int> chunk })=>RustLib.instance.api.crateApiAudioPcmAnalyzerPush(that: this, chunk: chunk);
+
+
+            }

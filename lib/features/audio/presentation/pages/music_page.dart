@@ -16,9 +16,10 @@ import '../widgets/circular_visualizer.dart';
 ///
 /// 对齐原型音乐屏语义，可视化升级为 Audio-reactive 圆形可视化
 /// （发光圆环 + 中心光球 + 强拍粒子爆发，见 circular_visualizer.dart）。
-/// 频谱由麦克风采集（record 插件）→ 纯 Dart FFT 分析（AudioAnalyzer）驱动，
-/// 与监听音乐实时同步；未采集时显示静默状态。
-/// `embedded=true` 时无 AppBar，由 Dock 壳托管。
+/// 分析链路（对齐 docs/design/music.md 音乐调光设置）：
+/// record 采集 PCM → Rust `PcmAnalyzer` 分析帧 → Rust `MusicRhythm`
+/// 律动引擎（亮度 = 音量 × 灵敏度、15 色板循环换色）→ 荧光棒下发。
+/// 未采集时显示静默状态。`embedded=true` 时无 AppBar，由 Dock 壳托管。
 class MusicPage extends StatefulWidget {
   const MusicPage({super.key, required this.viewModel, this.embedded = false});
 
@@ -49,9 +50,6 @@ class _MusicPageState extends State<MusicPage> {
   /// 灯光响应越来越滞后于音乐。
   bool _stickBusy = false;
 
-  /// 主导频带平滑位置（0..1，指数平滑防跳变；对应能量峰值所在频带）。
-  double _smoothPeak = 0;
-
   @override
   void dispose() {
     _sub?.cancel();
@@ -72,6 +70,16 @@ class _MusicPageState extends State<MusicPage> {
 
   void _onMode(String m) {
     setState(() => _mode = m);
+    unawaited(_audio.setRhythmMode(m));
+    // 单色律动用当前主题强调色作为固定颜色
+    if (m == '单色律动') {
+      final accent = Theme.of(context).colorScheme.primary;
+      unawaited(_audio.setRhythmBaseColor(
+        (accent.r * 255).round(),
+        (accent.g * 255).round(),
+        (accent.b * 255).round(),
+      ));
+    }
     if (_ensureConnected()) {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
@@ -81,8 +89,8 @@ class _MusicPageState extends State<MusicPage> {
 
   /// 音频帧 → 荧光棒灯效（节流 60ms + 在途丢帧；未连接/写失败静默，不刷屏）。
   ///
-  /// 映射：主导频带（能量峰值所在频带）→ 色相，低音偏暖、高音偏冷，
-  /// 指数平滑防跳变；音量→亮度，强拍→亮度瞬间拉满（鼓点闪亮）。
+  /// 颜色与亮度由 Rust 律动引擎计算（亮度 = 音量 × 灵敏度，色板循环），
+  /// 本页只负责节流与下发。
   void _syncStick(AudioFrame f) {
     final device = widget.viewModel.activeDevice;
     if (device == null || !widget.viewModel.status.isConnected) return;
@@ -94,41 +102,17 @@ class _MusicPageState extends State<MusicPage> {
     }
     _lastStickSend = now;
 
-    // 主导频带：能量峰值所在频带索引 → 归一化位置（0..1，低音→高音）
-    var peakIdx = 0;
-    var peakVal = -1.0;
-    for (var i = 0; i < f.bands.length; i++) {
-      if (f.bands[i] > peakVal) {
-        peakVal = f.bands[i];
-        peakIdx = i;
-      }
-    }
-    final peakNorm = f.bands.isEmpty ? 0.0 : peakIdx / (f.bands.length - 1);
-    // 指数平滑（节流 60ms 一帧，取 0.5 系数约 3 帧 ≈ 180ms 收敛，
-    // 防频带跳变闪烁的同时不明显拖慢色相跟随）
-    _smoothPeak = _smoothPeak * 0.5 + peakNorm * 0.5;
-
-    // 色相：低音(0)→红/橙，中音→绿，高音→蓝紫；映射到 0~300 避开红紫相接
-    final hue = _smoothPeak * 300;
-    final color = HSVColor.fromAHSV(
-      1,
-      hue,
-      0.85,
-      (0.45 + 0.55 * f.volume).clamp(0.0, 1.0),
-    ).toColor();
-    // 亮度死区：音量过低视为静音，荧光棒熄灭，避免底噪下微亮。
-    // 死区取低（0.04）：小音量音乐播放时灯棒保持跟随，不提前熄灭
-    final brightness = f.isBeat
-        ? 1.0
-        : f.volume < 0.04
-            ? 0.0
-            : ((f.volume - 0.04) / 0.96).clamp(0.0, 1.0);
-
-    // 静默失败：避免每次节拍弹错；完成后解除在途标记
+    // 静默失败：Rust 引擎/写失败不弹错；完成后解除在途标记
     _stickBusy = true;
     unawaited(
-      _lighting
-          .sendEffect(device, fx: LightingFx.constantlyOn, color: color, brightness: brightness)
+      _audio
+          .nextRhythm(f)
+          .then((out) => _lighting.sendEffect(
+                device,
+                fx: LightingFx.constantlyOn,
+                color: Color.fromARGB(255, out.rgb[0], out.rgb[1], out.rgb[2]),
+                brightness: out.brightness,
+              ))
           .catchError((_) {})
           .whenComplete(() => _stickBusy = false),
     );
@@ -203,7 +187,10 @@ class _MusicPageState extends State<MusicPage> {
                     label: '节奏灵敏度',
                     valueLabel: '${(_sensitivity * 100).round()}%',
                     value: _sensitivity,
-                    onChanged: (v) => setState(() => _sensitivity = v),
+                    onChanged: (v) {
+                      setState(() => _sensitivity = v);
+                      unawaited(_audio.setRhythmSensitivity(v));
+                    },
                   ),
                   const SizedBox(height: 18),
                   _ModeRow(selected: _mode, onPick: _onMode),

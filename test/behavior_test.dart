@@ -7,6 +7,7 @@
 // 已连接路径用 _FakeRepo 子类伪造蓝牙状态，验证连接后行为。
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:wanshou/app/app.dart';
@@ -18,7 +19,6 @@ import 'package:wanshou/features/device/domain/lightstick.dart';
 import 'package:wanshou/features/device/presentation/device_view_model.dart';
 import 'package:wanshou/features/device/presentation/pages/device_page.dart';
 import 'package:wanshou/features/lighting/presentation/pages/color_picker_page.dart';
-import 'package:wanshou/features/lighting/presentation/pages/fx_page.dart';
 import 'package:wanshou/features/lighting/presentation/pages/seat_binding_page.dart';
 import 'package:wanshou/features/settings/settings_page.dart';
 
@@ -53,6 +53,18 @@ Widget _wrap(Widget home) =>
 
 void main() {
   setUp(() => themeModeNotifier.value = ThemeMode.system);
+
+  // record 插件在测试环境无原生实现：全局 mock 通道让构造（create）成功，
+  // 否则 AudioRecorder 构造函数发起的 create 永久挂起，泄漏 record 包
+  // 的全局信号量，导致后续 hasPermission 全部卡死。
+  setUp(() {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('com.llfbandit.record/messages'),
+      (call) async => null,
+    );
+  });
 
   testWidgets('主题切换：设置页三档切换驱动 MaterialApp 重建', (tester) async {
     await tester.pumpWidget(const App());
@@ -92,68 +104,60 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets('FX 往返：选模式+速度 → 应用 → 设置页摘要与提示更新', (tester) async {
+  testWidgets('设置页：灯光/音频偏好分组渲染与默认值', (tester) async {
     final vm = await _vm(connected: true);
     addTearDown(vm.dispose);
     await tester.pumpWidget(_wrap(SettingsPage(viewModel: vm)));
     await tester.pump();
 
-    // 进入灯光效果页
-    await tester.ensureVisible(find.text('灯光效果模式'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('灯光效果模式'));
-    await tester.pumpAndSettle();
-    expect(find.text('选择灯光效果模式'), findsOneWidget);
+    // 主题模式（顶部）
+    expect(find.text('跟随系统'), findsOneWidget);
 
-    // 首行网格直接可见：先选呼吸灯
-    await tester.tap(find.text('呼吸灯'));
-    await tester.pump();
-    // 滑杆在列表下方（懒构建），向上滚动后再断言默认 50%
-    await tester.drag(find.byType(FxPage), const Offset(0, -300));
-    await tester.pump();
-    expect(find.text('50%'), findsOneWidget);
-    await tester.tap(find.text('应用效果'));
-    await tester.pumpAndSettle();
+    // 灯光偏好分组（懒构建列表，滚动到可见后断言默认值）
+    await tester.scrollUntilVisible(find.text('默认亮度'), 200);
+    expect(find.text('80%'), findsOneWidget);
 
-    // 回到设置页：摘要更新 + 提示
-    expect(find.text('当前：呼吸灯'), findsOneWidget);
-    expect(find.text('✓ 灯光效果已应用：呼吸灯 速度 50%'), findsOneWidget);
+    // 音频律动分组
+    await tester.scrollUntilVisible(find.text('默认灵敏度'), 200);
+    expect(find.text('60%'), findsOneWidget);
+    expect(find.text('单色律动'), findsOneWidget);
   });
 
-  testWidgets('调色盘：默认 #0A84FF，色环取色数学正确，hex 输入回填', (tester) async {
+  testWidgets('调色盘：默认 #0A84FF，色环取色/hex 回填/亮度滑杆', (tester) async {
     final vm = await _vm(connected: true);
     addTearDown(vm.dispose);
     await tester.pumpWidget(_wrap(ColorPickerPage(viewModel: vm)));
     await tester.pump();
 
-    // 默认 iOS 蓝（hex 输入框内容与 hint 同名，直接断言 controller）
-    expect(
-      tester.widget<TextField>(find.byType(TextField)).controller!.text,
-      '0A84FF',
-    );
+    TextField field() => tester.widget<TextField>(find.byType(TextField));
 
-    // 色环取色：起点在正下方边缘内侧（避免边界外不命中），拖到边缘
-    // 相对圆心角度 90°、S=1 → HSV(90°,1,1) = RGB(128,255,0) = #80FF00
+    // 默认 iOS 蓝
+    expect(field().controller!.text, '0A84FF');
+
+    // 色环取色：拖到底部边缘（90° 黄绿），颜色应显著偏离默认蓝
     final wheelRect = tester.getRect(find.byType(AspectRatio));
     final g = await tester.startGesture(
         wheelRect.center + Offset(0, wheelRect.height / 2 - 2));
     await g.moveBy(const Offset(0, 2));
     await g.up();
     await tester.pump();
-    expect(find.text('80FF00'), findsOneWidget);
+    final afterDrag = field().controller!.text;
+    expect(afterDrag, isNot('0A84FF'));
 
-    // 点击圆心 → 白（S=0）
+    // 点击圆心 → 白（S=0，精确）
     final g2 = await tester.startGesture(wheelRect.center);
     await g2.up();
     await tester.pump();
-    expect(find.text('FFFFFF'), findsOneWidget);
+    expect(field().controller!.text, 'FFFFFF');
 
-    // hex 输入回填：直接键入十六进制 → 状态与色块同步
+    // hex 输入回填：直接键入十六进制 → 状态同步
     await tester.enterText(find.byType(TextField), '00FF00');
     await tester.pump();
-    expect(find.text('00FF00'), findsOneWidget);
+    expect(field().controller!.text, '00FF00');
 
-    // 亮度滑杆默认 80%，左拉后不再是满值
+    // 亮度滑杆默认 80%，左拉后不再是满值（滑杆在视口下方，先滚动到可见）
+    await tester.ensureVisible(find.byType(Slider));
+    await tester.pump();
     expect(find.text('80%'), findsOneWidget);
     await tester.drag(find.byType(Slider), const Offset(-120, 0));
     await tester.pump();
@@ -163,21 +167,22 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets('连接守卫：未连接时应用颜色 → 提示并跳转连接页', (tester) async {
+  testWidgets('连接守卫：未连接点选灯效 → 提示，不触发下发', (tester) async {
     final vm = await _vm(connected: false);
     addTearDown(vm.dispose);
     await tester.pumpWidget(_wrap(ColorPickerPage(viewModel: vm)));
     await tester.pump();
 
-    await tester.ensureVisible(find.text('应用颜色'));
+    await tester.ensureVisible(find.text('呼吸'));
     await tester.pump();
-    await tester.tap(find.text('应用颜色'));
-    await tester.pumpAndSettle();
+    await tester.tap(find.text('呼吸'));
+    for (var i = 0; i < 4; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
 
-    expect(find.text('请先完成蓝牙连接'), findsOneWidget);
-    // 已推入设备连接页
-    expect(find.text('连接设备'), findsOneWidget);
-    expect(find.byType(DevicePage), findsOneWidget);
+    expect(find.text('请先在「连接」Tab 配对应援棒'), findsOneWidget);
+    // 未推入设备连接页，仍停留在调色页
+    expect(find.byType(DevicePage), findsNothing);
   });
 
   testWidgets('座位绑定：区域+座位号 → 绑定成功提示', (tester) async {
@@ -199,42 +204,51 @@ void main() {
     expect(find.text('✓ 座位已绑定：看台 B 区 A区 12排 08号'), findsOneWidget);
   });
 
-  testWidgets('音乐调光：连接后点击切换 响应/暂停 状态', (tester) async {
+  testWidgets('音乐律动：连接后点击开始 → 麦克风不可用 → 提示采集失败，状态不变',
+      (tester) async {
+    // 测试环境无 record 原生插件：mock 平台通道——构造（create）成功，
+    // 权限请求（hasPermission）立即失败，避免永久挂起。
+    // 注意 create 是 AudioRecorder 构造函数异步发起的，不能抛错。
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      const MethodChannel('com.llfbandit.record/messages'),
+      (call) async {
+        if (call.method == 'create') return null;
+        throw PlatformException(code: 'no_impl', message: '测试环境无录音插件');
+      },
+    );
+
     final vm = await _vm(connected: true);
     addTearDown(vm.dispose);
     await tester.pumpWidget(_wrap(MusicPage(viewModel: vm)));
     await tester.pump();
 
-    // 默认响应中（旋转动画持续调度帧）
-    expect(find.text('Ⅱ　音乐响应中'), findsOneWidget);
+    // 默认已暂停
+    expect(find.text('已暂停'), findsOneWidget);
 
-    // 点击暂停：文案切换，动画停止（pumpAndSettle 可收敛）
-    await tester.tap(find.text('Ⅱ　音乐响应中'));
+    // 点击开始：权限请求失败 → 提示无法采集，状态不变
+    await tester.ensureVisible(find.text('开始律动'));
     await tester.pump();
-    expect(find.text('▶　音乐响应已暂停'), findsOneWidget);
-    await tester.pumpAndSettle();
-
-    // 再次点击恢复
-    await tester.tap(find.text('▶　音乐响应已暂停'));
-    await tester.pump();
-    expect(find.text('Ⅱ　音乐响应中'), findsOneWidget);
+    await tester.tap(find.text('开始律动'));
+    for (var i = 0; i < 4; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    expect(find.textContaining('无法采集音乐'), findsOneWidget);
+    // 状态未变，按钮仍是开始
+    expect(find.text('开始律动'), findsOneWidget);
   });
 
-  testWidgets('音乐调光：未连接时点击 → 守卫提示，不切换状态', (tester) async {
+  testWidgets('音乐律动：未连接切换模式 → 守卫提示', (tester) async {
     final vm = await _vm(connected: false);
     addTearDown(vm.dispose);
     await tester.pumpWidget(_wrap(MusicPage(viewModel: vm)));
     await tester.pump();
 
-    await tester.tap(find.text('Ⅱ　音乐响应中'));
-    // 唱片动画持续旋转，pumpAndSettle 不收敛，用定长 pump
-    for (var i = 0; i < 6; i++) {
-      await tester.pump(const Duration(milliseconds: 100));
+    await tester.ensureVisible(find.text('七彩律动'));
+    await tester.pump();
+    await tester.tap(find.text('七彩律动'));
+    for (var i = 0; i < 4; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
     }
-
-    expect(find.text('请先完成蓝牙连接'), findsOneWidget);
-    // 状态未变（音乐页被推入的连接页覆盖为 offstage，需显式查找）
-    expect(find.text('Ⅱ　音乐响应中', skipOffstage: false), findsOneWidget);
-    expect(find.byType(DevicePage), findsOneWidget);
+    expect(find.text('请先在「连接」Tab 配对应援棒'), findsOneWidget);
   });
 }

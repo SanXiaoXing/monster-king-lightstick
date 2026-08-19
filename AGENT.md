@@ -104,7 +104,7 @@ lib/
 │   ├── home/presentation/protocol_demo_page.dart # 协议验证页 [已实现]（设置页入口）
 │   ├── device/                       # data/domain/presentation [已实现：flutter_blue_plus 于 Repository 层]
 │   ├── lighting/                     # domain [骨架]；presentation：调色盘/座位绑定/灯光效果 [已实现]
-│   ├── audio/                        # domain [骨架]；presentation：音乐调光 [已实现]
+│   ├── audio/                        # domain [已实现：AudioFrame/RhythmOutput 模型，分析已迁 Rust]；data [已实现：record 采集 + Rust 分析/律动]；presentation：音乐调光 [已实现]
 │   ├── settings/settings_page.dart   # [已实现]（主题切换/灯光效果入口/协议验证/清除设备）
 │   └── about/                        # tips_page 温馨提示 [已实现]；about_page [骨架]
 ├── shared/
@@ -122,12 +122,14 @@ src/
 ├── api/
 │   ├── protocol.rs                   # 协议构造 25 函数 [已实现]
 │   ├── simple.rs                     # frb 初始化钩子（init_app）[已实现]
-│   ├── bluetooth.rs / lightstick.rs / audio.rs   # 能力入口 [骨架]
+│   ├── bluetooth.rs                 # 能力入口 [骨架]
+│   ├── lightstick.rs                # 音乐律动引擎（MusicRhythm→LightOutput）[已实现]；其余 [骨架]
+│   ├── audio.rs                     # 音频分析（PcmAnalyzer→AudioFrame）[已实现]
 │   └── mod.rs
 ├── bluetooth/                        # scanner/connection/characteristic [骨架]
 ├── protocol/                         # 门面：mod+packet+command [透传]，decoder/encoder [骨架]
-├── lightstick/                       # device/controller/effect [骨架]
-├── audio/                            # analyzer/spectrum [骨架]
+├── lightstick/                       # effect：音乐律动引擎（亮度=音量×灵敏度、15 色板循环，对齐 docs/design/music.md）[已实现]；device/controller [骨架]
+├── audio/                            # analyzer：PCM16→音量/频带/节拍帧（Dart 版移植）[已实现]；spectrum [骨架]
 ├── error.rs                          # WanError 统一错误 [已实现]（AES API 已 Result 上报）
 ├── frb_generated.rs                  # 生成，禁改
 └── lib.rs

@@ -2,26 +2,43 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:record/record.dart';
+import 'package:wanshou/src/rust/api/audio.dart' as frb_audio;
+import 'package:wanshou/src/rust/api/lightstick.dart' as frb_light;
 
 import '../domain/audio_analysis.dart';
 
-/// 音频数据访问边界：麦克风采集（record 插件）+ 分析（纯 Dart 域模型）。
+/// 音频数据访问边界：麦克风采集（record 插件）+ 分析（Rust，经 frb）。
 ///
-/// UI 只依赖本 Repository，不直接触碰插件——与 DeviceRepository 同接缝；
-/// Rust audio/ 就绪后换实现，UI 不动（分层铁律见 AGENT.md）。
+/// UI 只依赖本 Repository（领域类型），不直接触碰 frb 生成代码——与
+/// DeviceRepository 同接缝（分层铁律见 AGENT.md）。
+///
+/// 音乐调光链路（对齐 docs/design/music.md）：
+/// record 采集 PCM16 → Rust `PcmAnalyzer` 分析出音量/频带/节拍帧 →
+/// Rust `MusicRhythm` 律动引擎（亮度 = 音量 × 灵敏度，色板循环）→
+/// 灯效输出交 [RhythmOutput] 由调用方下发荧光棒。
 class AudioRepository {
   final AudioRecorder _recorder = AudioRecorder();
-  final AudioAnalyzer _analyzer = AudioAnalyzer();
+
+  // Rust 引擎懒创建：start()/nextRhythm 首次调用时经 frb 构造
+  // （RustLib 未初始化时静默失败，不阻塞 UI）。
+  frb_audio.PcmAnalyzer? _analyzer;
+  frb_light.MusicRhythm? _rhythm;
 
   StreamController<AudioFrame>? _controller;
   StreamSubscription<Uint8List>? _sub;
 
   bool get isListening => _sub != null;
 
+  Future<frb_audio.PcmAnalyzer> _ensureAnalyzer() async =>
+      _analyzer ??= await frb_audio.PcmAnalyzer.create();
+
+  Future<frb_light.MusicRhythm> _ensureRhythm() async =>
+      _rhythm ??= await frb_light.MusicRhythm.create();
+
   /// 请求麦克风权限（Android 运行时弹窗；拒绝返回 false）。
   Future<bool> requestPermission() => _recorder.hasPermission(request: true);
 
-  /// 开始监听麦克风，返回分析帧流（PCM16 单声道 44.1kHz）。
+  /// 开始监听麦克风，返回分析帧流（PCM16 单声道 44.1kHz，Rust 分析）。
   ///
   /// 权限被拒时抛出 [StateError]；调用方可先 [requestPermission] 预检。
   Future<Stream<AudioFrame>> start() async {
@@ -35,23 +52,28 @@ class AudioRepository {
     _controller = controller;
 
     try {
+      final analyzer = await _ensureAnalyzer();
       final pcm = await _recorder.startStream(const RecordConfig(
         encoder: AudioEncoder.pcm16bits,
         sampleRate: 44100,
         numChannels: 1,
-        // 音乐采集必须关闭通话向处理：AGC 会让音量忽大忽小（ pumping ），
+        // 音乐采集必须关闭通话向处理：AGC 会让音量忽大忽小（pumping），
         // 噪声抑制/回声消除会把音乐误判为噪声导致失真、闷响、断音
         autoGain: false,
         echoCancel: false,
         noiseSuppress: false,
       ));
       _sub = pcm.listen(
-        (bytes) {
-          final frames = _analyzer.push(bytes);
-          if (frames.isNotEmpty && !controller.isClosed) {
-            for (final f in frames) {
-              controller.add(f);
+        (bytes) async {
+          try {
+            final frames = await analyzer.push(chunk: bytes);
+            if (frames.isNotEmpty && !controller.isClosed) {
+              for (final f in frames) {
+                controller.add(_toDomain(f));
+              }
             }
+          } catch (_) {
+            // 单 chunk 分析失败不影响后续帧
           }
         },
         onError: (Object e) {
@@ -69,6 +91,69 @@ class AudioRepository {
     }
     return controller.stream;
   }
+
+  /// 律动模式（UI 四档：单色律动/七彩律动/强烈/柔和）→ Rust 引擎。
+  Future<void> setRhythmMode(String mode) async {
+    try {
+      final r = await _ensureRhythm();
+      await r.setMode(mode: _modeToFrb(mode));
+    } catch (_) {
+      // Rust 引擎不可用时静默降级（不阻塞 UI）
+    }
+  }
+
+  /// 灵敏度 0..1（亮度 = 音量 × 灵敏度）。
+  Future<void> setRhythmSensitivity(double v) async {
+    try {
+      final r = await _ensureRhythm();
+      await r.setSensitivity(v: v);
+    } catch (_) {
+      // 同上，静默降级
+    }
+  }
+
+  /// 单色律动的固定颜色（RGB 三字节）。
+  Future<void> setRhythmBaseColor(int r, int g, int b) async {
+    try {
+      final rh = await _ensureRhythm();
+      await rh.setBaseColor(rgb: [r, g, b]);
+    } catch (_) {
+      // 同上，静默降级
+    }
+  }
+
+  /// 音频帧 → 律动灯效（Rust 引擎计算颜色与亮度）。
+  Future<RhythmOutput> nextRhythm(AudioFrame frame) async {
+    final r = await _ensureRhythm();
+    final out = await r.next(
+      frame: frb_audio.AudioFrame(
+        volume: frame.volume,
+        bands: frame.bands is Float64List
+            ? frame.bands as Float64List
+            : Float64List.fromList(frame.bands),
+        bass: frame.bass,
+        treble: frame.treble,
+        isBeat: frame.isBeat,
+      ),
+    );
+    return RhythmOutput(rgb: out.rgb, brightness: out.brightness);
+  }
+
+  /// frb 帧 → 领域帧。
+  static AudioFrame _toDomain(frb_audio.AudioFrame f) => AudioFrame(
+        volume: f.volume,
+        bands: f.bands,
+        bass: f.bass,
+        treble: f.treble,
+        isBeat: f.isBeat,
+      );
+
+  static frb_light.RhythmMode _modeToFrb(String m) => switch (m) {
+        '七彩律动' => frb_light.RhythmMode.rainbow,
+        '强烈' => frb_light.RhythmMode.strong,
+        '柔和' => frb_light.RhythmMode.soft,
+        _ => frb_light.RhythmMode.single,
+      };
 
   /// 停止监听并释放采集器。
   Future<void> stop() async {

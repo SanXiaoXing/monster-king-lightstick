@@ -2,7 +2,10 @@
 //!
 //! - [`protocol`] — 协议构造（已实现，25 个包装函数）
 //! - [`simple`] — frb 初始化钩子（init_app）
-//! - [`bluetooth`] / [`lightstick`] / [`audio`] — 待实现的三个能力入口
+//! - [`audio`] — 音频分析（已实现：PcmAnalyzer → AudioFrame）
+//! - [`lightstick`] — 音乐律动引擎（已实现：MusicRhythm → LightOutput）；
+//!   连接编排/其余效果待实现
+//! - [`bluetooth`] — 待实现的能力入口
 
 pub mod audio;
 pub mod bluetooth;

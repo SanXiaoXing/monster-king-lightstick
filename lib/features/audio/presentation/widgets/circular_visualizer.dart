@@ -16,6 +16,9 @@ import '../../domain/audio_analysis.dart';
 ///
 /// Ticker 以 60fps 平滑（指数 attack/decay），音频帧（~86fps）只更新目标值，
 /// 视觉层与采集层解耦，动画始终顺滑。
+///
+/// Ticker 仅在 `active=true` 时运行：未监听时完全静止（省电，且 Dock 常驻
+/// 页面不会让 pumpAndSettle 永不收敛）；开始监听后由音频帧驱动重启。
 class CircularVisualizer extends StatefulWidget {
   const CircularVisualizer({
     super.key,
@@ -45,7 +48,22 @@ class _CircularVisualizerState extends State<CircularVisualizer>
   void initState() {
     super.initState();
     widget.frameNotifier.addListener(_onFrame);
-    _ticker = createTicker(_onTick)..start();
+    _ticker = createTicker(_onTick);
+    if (widget.active) {
+      _ticker.start();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant CircularVisualizer old) {
+    super.didUpdateWidget(old);
+    if (widget.active && !_ticker.isActive) {
+      // 重启时重置时间基准，避免 dt 为负（ticker elapsed 从 start 重新计）
+      _last = Duration.zero;
+      _ticker.start();
+    } else if (!widget.active && _ticker.isActive) {
+      _ticker.stop();
+    }
   }
 
   void _onFrame() {

@@ -3,6 +3,8 @@
 
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
+import 'api/audio.dart';
+import 'api/lightstick.dart';
 import 'api/protocol.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -22,27 +24,57 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_io.dart';
                     required super.portManager,
                   });
 
-                  
+                  CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_MusicRhythmPtr => wire._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMusicRhythmPtr;
 
-                  @protected String dco_decode_String(dynamic raw);
+CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_PcmAnalyzerPtr => wire._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPcmAnalyzerPtr;
+
+
+
+                  @protected MusicRhythm dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMusicRhythm(dynamic raw);
+
+@protected PcmAnalyzer dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPcmAnalyzer(dynamic raw);
+
+@protected MusicRhythm dco_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMusicRhythm(dynamic raw);
+
+@protected PcmAnalyzer dco_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPcmAnalyzer(dynamic raw);
+
+@protected MusicRhythm dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMusicRhythm(dynamic raw);
+
+@protected PcmAnalyzer dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPcmAnalyzer(dynamic raw);
+
+@protected String dco_decode_String(dynamic raw);
+
+@protected AudioFrame dco_decode_audio_frame(dynamic raw);
 
 @protected bool dco_decode_bool(dynamic raw);
 
+@protected AudioFrame dco_decode_box_autoadd_audio_frame(dynamic raw);
+
 @protected int dco_decode_box_autoadd_u_8(dynamic raw);
+
+@protected double dco_decode_f_64(dynamic raw);
 
 @protected int dco_decode_i_32(dynamic raw);
 
 @protected IosBroadcastResult dco_decode_ios_broadcast_result(dynamic raw);
 
+@protected LightOutput dco_decode_light_output(dynamic raw);
+
 @protected LightingEffect dco_decode_lighting_effect(dynamic raw);
 
 @protected List<String> dco_decode_list_String(dynamic raw);
+
+@protected List<AudioFrame> dco_decode_list_audio_frame(dynamic raw);
+
+@protected Float64List dco_decode_list_prim_f_64_strict(dynamic raw);
 
 @protected List<int> dco_decode_list_prim_u_8_loose(dynamic raw);
 
 @protected Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
 
 @protected int? dco_decode_opt_box_autoadd_u_8(dynamic raw);
+
+@protected RhythmMode dco_decode_rhythm_mode(dynamic raw);
 
 @protected int dco_decode_u_16(dynamic raw);
 
@@ -54,27 +86,55 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_io.dart';
 
 @protected void dco_decode_unit(dynamic raw);
 
+@protected BigInt dco_decode_usize(dynamic raw);
+
 @protected WanError dco_decode_wan_error(dynamic raw);
+
+@protected MusicRhythm sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMusicRhythm(SseDeserializer deserializer);
+
+@protected PcmAnalyzer sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPcmAnalyzer(SseDeserializer deserializer);
+
+@protected MusicRhythm sse_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMusicRhythm(SseDeserializer deserializer);
+
+@protected PcmAnalyzer sse_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPcmAnalyzer(SseDeserializer deserializer);
+
+@protected MusicRhythm sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMusicRhythm(SseDeserializer deserializer);
+
+@protected PcmAnalyzer sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPcmAnalyzer(SseDeserializer deserializer);
 
 @protected String sse_decode_String(SseDeserializer deserializer);
 
+@protected AudioFrame sse_decode_audio_frame(SseDeserializer deserializer);
+
 @protected bool sse_decode_bool(SseDeserializer deserializer);
 
+@protected AudioFrame sse_decode_box_autoadd_audio_frame(SseDeserializer deserializer);
+
 @protected int sse_decode_box_autoadd_u_8(SseDeserializer deserializer);
+
+@protected double sse_decode_f_64(SseDeserializer deserializer);
 
 @protected int sse_decode_i_32(SseDeserializer deserializer);
 
 @protected IosBroadcastResult sse_decode_ios_broadcast_result(SseDeserializer deserializer);
 
+@protected LightOutput sse_decode_light_output(SseDeserializer deserializer);
+
 @protected LightingEffect sse_decode_lighting_effect(SseDeserializer deserializer);
 
 @protected List<String> sse_decode_list_String(SseDeserializer deserializer);
+
+@protected List<AudioFrame> sse_decode_list_audio_frame(SseDeserializer deserializer);
+
+@protected Float64List sse_decode_list_prim_f_64_strict(SseDeserializer deserializer);
 
 @protected List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer);
 
 @protected Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
 
 @protected int? sse_decode_opt_box_autoadd_u_8(SseDeserializer deserializer);
+
+@protected RhythmMode sse_decode_rhythm_mode(SseDeserializer deserializer);
 
 @protected int sse_decode_u_16(SseDeserializer deserializer);
 
@@ -86,27 +146,55 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_io.dart';
 
 @protected void sse_decode_unit(SseDeserializer deserializer);
 
+@protected BigInt sse_decode_usize(SseDeserializer deserializer);
+
 @protected WanError sse_decode_wan_error(SseDeserializer deserializer);
+
+@protected void sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMusicRhythm(MusicRhythm self, SseSerializer serializer);
+
+@protected void sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPcmAnalyzer(PcmAnalyzer self, SseSerializer serializer);
+
+@protected void sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMusicRhythm(MusicRhythm self, SseSerializer serializer);
+
+@protected void sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPcmAnalyzer(PcmAnalyzer self, SseSerializer serializer);
+
+@protected void sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMusicRhythm(MusicRhythm self, SseSerializer serializer);
+
+@protected void sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPcmAnalyzer(PcmAnalyzer self, SseSerializer serializer);
 
 @protected void sse_encode_String(String self, SseSerializer serializer);
 
+@protected void sse_encode_audio_frame(AudioFrame self, SseSerializer serializer);
+
 @protected void sse_encode_bool(bool self, SseSerializer serializer);
 
+@protected void sse_encode_box_autoadd_audio_frame(AudioFrame self, SseSerializer serializer);
+
 @protected void sse_encode_box_autoadd_u_8(int self, SseSerializer serializer);
+
+@protected void sse_encode_f_64(double self, SseSerializer serializer);
 
 @protected void sse_encode_i_32(int self, SseSerializer serializer);
 
 @protected void sse_encode_ios_broadcast_result(IosBroadcastResult self, SseSerializer serializer);
 
+@protected void sse_encode_light_output(LightOutput self, SseSerializer serializer);
+
 @protected void sse_encode_lighting_effect(LightingEffect self, SseSerializer serializer);
 
 @protected void sse_encode_list_String(List<String> self, SseSerializer serializer);
+
+@protected void sse_encode_list_audio_frame(List<AudioFrame> self, SseSerializer serializer);
+
+@protected void sse_encode_list_prim_f_64_strict(Float64List self, SseSerializer serializer);
 
 @protected void sse_encode_list_prim_u_8_loose(List<int> self, SseSerializer serializer);
 
 @protected void sse_encode_list_prim_u_8_strict(Uint8List self, SseSerializer serializer);
 
 @protected void sse_encode_opt_box_autoadd_u_8(int? self, SseSerializer serializer);
+
+@protected void sse_encode_rhythm_mode(RhythmMode self, SseSerializer serializer);
 
 @protected void sse_encode_u_16(int self, SseSerializer serializer);
 
@@ -117,6 +205,8 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_io.dart';
 @protected void sse_encode_u_8(int self, SseSerializer serializer);
 
 @protected void sse_encode_unit(void self, SseSerializer serializer);
+
+@protected void sse_encode_usize(BigInt self, SseSerializer serializer);
 
 @protected void sse_encode_wan_error(WanError self, SseSerializer serializer);
                 }
@@ -139,6 +229,50 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_io.dart';
             RustLibWire(ffi.DynamicLibrary dynamicLibrary)
                 : _lookup = dynamicLibrary.lookup;
 
+            
+            void rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMusicRhythm(
+              ffi.Pointer<ffi.Void> ptr,
+            ) {
+              return _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMusicRhythm(
+                ptr,
+              );
+            }
+
+            late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMusicRhythmPtr = _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>('frbgen_wanshou_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMusicRhythm');
+            late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMusicRhythm = _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMusicRhythmPtr.asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+            
+            void rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMusicRhythm(
+              ffi.Pointer<ffi.Void> ptr,
+            ) {
+              return _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMusicRhythm(
+                ptr,
+              );
+            }
+
+            late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMusicRhythmPtr = _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>('frbgen_wanshou_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMusicRhythm');
+            late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMusicRhythm = _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMusicRhythmPtr.asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+            
+            void rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPcmAnalyzer(
+              ffi.Pointer<ffi.Void> ptr,
+            ) {
+              return _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPcmAnalyzer(
+                ptr,
+              );
+            }
+
+            late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPcmAnalyzerPtr = _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>('frbgen_wanshou_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPcmAnalyzer');
+            late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPcmAnalyzer = _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPcmAnalyzerPtr.asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+            
+            void rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPcmAnalyzer(
+              ffi.Pointer<ffi.Void> ptr,
+            ) {
+              return _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPcmAnalyzer(
+                ptr,
+              );
+            }
+
+            late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPcmAnalyzerPtr = _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>('frbgen_wanshou_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPcmAnalyzer');
+            late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPcmAnalyzer = _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPcmAnalyzerPtr.asFunction<void Function(ffi.Pointer<ffi.Void>)>();
             
         }
         
