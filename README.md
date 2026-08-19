@@ -1,66 +1,322 @@
-# WanShou — 万兽之王光剑/演出宝宝剑控制 App
+# 宝宝剑控制 App · monster-king-lightstick
 
-从微信小程序反编译代码精确移植的宝宝剑蓝牙协议栈 + Flutter 控制端。
-协议层与原小程序**字节级对齐**，61 个单元测试验证通过。
+> **让宝宝剑，一直陪着音乐一起亮。** ✨
 
-## 仓库结构
+一个由**谦友制作的非官方宝宝剑控制 App**。
 
-仓库根目录即 Flutter 工程根（`pubspec.yaml` 与 `lib/` 在根，平铺），
-周边目录共存于同一仓库。
+因为不想让宝宝剑只能在小程序中闪烁几分钟，
+所以做了这个小东西。
 
-| 目录 | 说明 | 状态 |
-|---|---|---|
-| `lib/` | Flutter 应用（UI / feature 分层） | 骨架 + 协议验证页 |
-| `rust/` | flutter_rust_bridge 桥接 crate（api / bluetooth / lightstick / audio / protocol 门面） | api 已实现，其余骨架 |
-| `wan_protocol/` | 协议实现 crate（封包 / CRC32 / AES / Ed25519 / 广播 / OTA） | **已验证（61 tests）** |
-| `glowstick-app-main/` | Kotlin 参考实现（只读，BLE 真机时序来源） | 冻结 |
-| `docs/` | protocol / architecture / reverse-engineering | 持续更新 |
-| `scripts/` | 构建/辅助脚本 | 空 |
+连接宝宝剑，打开音乐，
+让它跟着节奏一起呼吸、闪烁、变换颜色。
 
-> 分层规则、边界铁律、代码归属决策表见 **[AGENT.md](AGENT.md)**。
+> 「我好像在哪见过你」（听歌歌词刚好到这，那就写这个吧）
 
-## 分层架构
+也许我们都见过那束光。
 
-```
-Flutter (lib/)                 "人怎么操作"
-   features/*/{presentation,domain,data}
-   core / shared
-        ↓ flutter_rust_bridge
-Rust api/ (rust/src/api)        Flutter ↔ Rust 唯一边界
-        ↓
-Rust 领域层                     "设备怎么工作"
-   lightstick/  ← bluetooth/（BLE 通信）
-                ← protocol/ → wan_protocol（协议实现）
-   audio/                       （律动分析）
-```
+---
 
-## 快速开始
+## ✨ 它能做什么？
 
-```powershell
-# 协议层测试（61 个）
+### 💡 控制宝宝剑
+
+连接宝宝剑后，可以直接控制灯光：
+
+* 🌑 黑屏
+* 💡 常亮
+* 🌈 随机色
+* ⚡ 快闪
+* 👀 眨眼
+* 🌬️ 呼吸
+* 🎉 聚会
+* 🌈 彩虹
+* ⭐ 星空
+
+还可以自己调颜色。
+
+**色环 + Hex + 亮度**，
+想让它是什么颜色，就是什么颜色。
+
+---
+
+### 🎵 让宝宝剑跟着音乐一起亮
+
+这是这个 App 最想做的事情。
+
+手机麦克风采集音乐后，由 Rust 实时分析：
+
+**音量 → 频带 → 节拍 → 灯光**
+
+让宝宝剑不再只是“亮着”，
+而是真的**跟着音乐动起来**。
+
+目前提供：
+
+* 🎵 单色律动
+* 🌈 七彩律动
+* 🔥 强烈律动
+* 🌙 柔和律动
+
+还可以调整灵敏度。
+
+听歌，KTV的时候，
+它可以跟着现场的音乐一起闪。
+
+---
+
+## 📱 后台也能继续亮
+
+官方小程序存在运行限制，
+无法长时间在后台持续使用手机麦克风。
+
+所以这个 App 专门解决了这个问题。
+
+Android 前台服务负责保持音乐监听，
+即使：
+
+* 锁屏
+* 切到后台
+* 手机长时间播放音乐
+
+也可以继续进行音乐律动。
+
+> **灯可以休息，但音乐还没有结束。**
+
+---
+
+## 🎤 为什么会有这个项目？
+
+其实没有什么特别伟大的理由。
+
+就是因为喜欢薛之谦，
+也喜欢演唱会现场那一片灯海。
+
+然后突然觉得：
+
+> **如果宝宝剑可以一直跟着音乐亮，会不会很有意思？**
+
+于是就开始做了。
+
+从最开始研究蓝牙广播、
+分析微信小程序，
+一点一点还原协议，
+到最后让它真的在手机上亮起来。
+
+中间踩了不少坑。
+
+但当宝宝剑第一次按照自己的代码亮起来的时候，
+还是觉得：
+
+**嗯，这东西做出来了。**
+
+所以它不是官方 App，
+也不是商业项目。
+
+只是一个谦友做给自己，
+也做给其他谦友的小玩意。
+
+---
+
+## 🌟 关于“宝宝剑”
+
+本项目使用微信小程序中分析得到的通信协议，
+实现宝宝剑的独立控制。
+
+协议实现目前包含：
+
+* BLE 通信
+* 灯效控制
+* 颜色与亮度
+* 座位绑定
+* 广播
+* OTA
+* 数据校验
+* 加解密
+* Ed25519 签名验证
+
+协议层目前拥有 **61 个单元测试**。
+
+详细协议说明：
+
+👉 [`docs/protocol/PROTOCOL.md`](docs/protocol/PROTOCOL.md)
+
+---
+
+## 📥 下载
+
+**Android 11（API 30）及以上**
+
+👉 [Gitee Releases](https://gitee.com/yan-kmd/monster-king-lightstick/releases/latest)
+
+软件完全免费。
+
+如果有人向你出售这个 App：
+
+**别买。**
+
+请始终从上面的项目地址获取。
+
+---
+
+## 🚀 开发
+
+如果你也想一起折腾宝宝剑：
+
+### 环境
+
+* Flutter / Dart `^3.11.0`
+* Rust `1.96.0`
+* Android SDK
+* Android 11+
+
+### 运行
+
+```bash
+# 协议层测试
 cargo test --manifest-path wan_protocol/Cargo.toml
 
-# 桥接层编译检查
+# Rust 桥接层检查
 cargo check --manifest-path rust/Cargo.toml
 
-# 运行 Flutter 端（Windows 需开发者模式：start ms-settings:developers）
-# 在仓库根执行
+# 启动 Flutter
 flutter run
 ```
 
-## 协议速览
+---
 
-- 命令包：`[帧序号 4B LE][命令体 N B][CRC32 4B LE]`（IEEE 802.3）
-- 控制通道：服务 `FFE0` / 写 `FFE1`（NoResponse）/ Notify `FFE2`
-- 9 种灯效、座位绑定、Ed25519 防伪、双平台广播烧录、OTA 分包
-- 金标准：`LIGHT_FLASH_HEX = 02000000100004ff020c06104c6a5e52`（真机抓包）
+## 🏗 技术架构
 
-完整规格：[docs/protocol/PROTOCOL.md](docs/protocol/PROTOCOL.md)
+项目采用：
 
-## 许可协议
+**Flutter + Rust + flutter_rust_bridge**
 
-本仓库（monster-king-lightstick）以
-[知识共享 署名-非商业性使用-相同方式共享 4.0 国际（CC BY-NC-SA 4.0）](https://creativecommons.org/licenses/by-nc-sa/4.0/)
-许可协议发布，版权归 SanXiaoXing 所有。详见 [LICENSE](LICENSE)。
+```text
+Flutter
+  │
+  │ flutter_rust_bridge
+  ↓
+Rust API
+  │
+  ├── Bluetooth
+  ├── Lightstick
+  ├── Audio
+  └── Protocol
+          │
+          ↓
+    wan_protocol
+```
 
-> 本许可不涵盖商标权。「宝宝剑」™ 为官方品牌商标，本项目为非官方个人项目。
+简单来说：
+
+> Flutter 负责“怎么操作”
+> Rust 负责“宝宝剑怎么工作”
+
+UI 层不直接接触 BLE 和协议实现，
+方便以后替换 Native / Mock 实现。
+
+---
+
+## 📁 项目结构
+
+```text
+.
+├── lib/                    # Flutter App
+│   ├── features/
+│   │   ├── home/
+│   │   ├── device/
+│   │   ├── lighting/
+│   │   ├── audio/
+│   │   ├── settings/
+│   │   └── about/
+│   ├── core/
+│   └── shared/
+│
+├── rust/                   # Flutter ↔ Rust 桥接层
+│
+├── wan_protocol/           # 宝宝剑协议实现
+│
+├── glowstick-app-main/     # Kotlin 参考实现
+│
+├── docs/                   # 协议 / 设计文档
+│
+└── scripts/                # 构建辅助脚本
+```
+
+---
+
+## 🗺 Roadmap
+
+* [x] 蓝牙扫描 / 连接
+* [x] 宝宝剑灯效控制
+* [x] 调色盘
+* [x] 亮度调节
+* [x] 音乐律动
+* [x] Rust 实时音频分析
+* [x] Android 后台持续监听
+* [x] 主题切换
+* [x] 关于页 / 开源信息
+
+---
+
+## ❤️ 写给谦友
+
+这个项目没有什么宏大的目标。
+
+就是希望有一天：
+
+戴上耳机，
+放一首喜欢的歌，
+拿起宝宝剑。
+
+然后灯光随着音乐慢慢亮起来。
+
+可能是演唱会现场，
+也可能只是自己的房间。
+
+**灯光亮起来的那一刻，**
+**好像又回到了那个现场。**
+
+> 「那是你（我）离开北京的生活」（出差中...）
+
+其实不用怎样。
+
+**让宝宝剑亮着就好。** ✨
+
+---
+
+## ⚠️ 声明
+
+本项目是**非官方个人项目**，与薛之谦本人、官方团队及相关商业主体无关联。
+
+“宝宝剑”等相关名称、商标及知识产权归其权利人所有。
+
+本项目仅用于个人学习、研究以及谦友之间的交流。
+
+本仓库采用：
+
+**CC BY-NC-SA 4.0**
+
+许可证发布。
+
+详见 [`LICENSE`](LICENSE)。
+
+---
+
+## 👋 最后
+
+如果这个项目帮到了你，
+欢迎给个 ⭐。
+
+如果你也是谦友，
+欢迎一起折腾。
+
+也许有一天，
+
+**我们可以让更多的宝宝剑，**
+**一起亮起来。** 🌟
+
+---
+
+**SanXiaoXing · 2026**
+
+*For the music. For the memories. For every light that once shone together.*
