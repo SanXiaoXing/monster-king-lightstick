@@ -22,9 +22,12 @@ import '../device/presentation/device_view_model.dart';
 /// （同一份临界阻尼弹簧：mass 1 / stiffness 246 / damping 31.4，
 /// 与 Dock 选中态同源，全 App 零漂移）。
 class SettingsPage extends StatefulWidget {
-  const SettingsPage({super.key, required this.viewModel});
+  const SettingsPage({super.key, required this.viewModel, this.onGoConnect});
 
   final DeviceViewModel viewModel;
+
+  /// 未连接时「去连接」回调（Dock 宿主切换 Tab；独立页可不传）。
+  final VoidCallback? onGoConnect;
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -99,6 +102,8 @@ class _SettingsPageState extends State<SettingsPage> {
                             connected ? AppColors.ok : scheme.onSurfaceVariant,
                         title: connected ? '已连接' : '设备未连接',
                         subtitle: name,
+                        chevron: !connected,
+                        onTap: connected ? null : widget.onGoConnect,
                       );
                     },
                   ),

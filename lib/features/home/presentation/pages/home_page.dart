@@ -54,7 +54,7 @@ class _HomePageState extends State<HomePage> {
           _buildPage(
               1, ColorPickerPage(viewModel: _vm, onGoConnect: () => _go(0))),
           _buildPage(2, MusicPage(viewModel: _vm, onGoConnect: () => _go(0))),
-          _buildPage(3, SettingsPage(viewModel: _vm)),
+          _buildPage(3, SettingsPage(viewModel: _vm, onGoConnect: () => _go(0))),
         ],
       ),
       bottomNavigationBar: GlassTabBar(index: _index, onChanged: _go),
