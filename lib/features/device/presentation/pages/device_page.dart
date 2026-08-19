@@ -3,6 +3,8 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_theme.dart';
+import '../../../../shared/theme/spacing.dart';
+import '../../../../shared/widgets/app_top_bar.dart';
 import '../../../../shared/widgets/brand_logo.dart';
 import '../../data/device_repository.dart';
 import '../../domain/device_state.dart';
@@ -12,14 +14,11 @@ import '../device_view_model.dart';
 /// 连接页（Dock「连接」Tab）。
 ///
 /// 对齐原型连接屏：连接胶囊 + 「附近设备」标题 + 设备卡片（logo/名称/信号/
-/// 断开按钮）+ 扫描指示。`embedded=true` 时无 AppBar，由 Dock 壳托管。
+/// 断开按钮）+ 扫描指示。顶部统一用 [AppTopBar]（由本页自带 Scaffold 托管）。
 class DevicePage extends StatefulWidget {
-  const DevicePage({super.key, this.viewModel, this.embedded = false});
+  const DevicePage({super.key, this.viewModel});
 
   final DeviceViewModel? viewModel;
-
-  /// true = 作为 Dock Tab 嵌入（无 AppBar，底部留 Dock 高度）；false = 独立推页。
-  final bool embedded;
 
   @override
   State<DevicePage> createState() => _DevicePageState();
@@ -52,25 +51,21 @@ class _DevicePageState extends State<DevicePage> {
           decoration: _pageDecoration(context),
           child: CustomScrollView(
             slivers: [
-              SliverToBoxAdapter(child: _ConnectPill(vm: _vm)),
               const SliverToBoxAdapter(child: _PageHead()),
               SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 18),
+                padding: EdgeInsets.symmetric(horizontal: Spacing.pageMargin),
                 sliver: _DeviceList(vm: _vm),
               ),
               SliverToBoxAdapter(child: _ScanNote(vm: _vm)),
+              // extendBody 下内容延伸到玻璃导航栏下方，留白让末项可滚出遮挡区
+              const SliverToBoxAdapter(child: SizedBox(height: Spacing.bottomSafe)),
             ],
           ),
         );
       },
     );
 
-    if (widget.embedded) {
-      // 导航栏已是 Scaffold.bottomNavigationBar，框架自动在导航栏之上布局，
-      // 不再需要为悬浮 Dock 手动留白。
-      return SafeArea(bottom: false, child: body);
-    }
-    return Scaffold(appBar: AppBar(title: const Text('连接设备')), body: body);
+    return Scaffold(appBar: AppTopBar(title: '附近设备'), body: body);
   }
 
   BoxDecoration _pageDecoration(BuildContext context) {
@@ -86,67 +81,6 @@ class _DevicePageState extends State<DevicePage> {
   }
 }
 
-/// 连接胶囊：圆点 + 状态文案。
-class _ConnectPill extends StatelessWidget {
-  const _ConnectPill({required this.vm});
-  final DeviceViewModel vm;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final st = vm.connection;
-    final (color, text) = switch (st) {
-      DeviceConnectionState.connected => (
-        AppColors.ok,
-        '已连接 ${vm.activeDevice?.name ?? vm.activeDevice?.address ?? ''}'.trim()
-      ),
-      DeviceConnectionState.connecting ||
-      DeviceConnectionState.disconnecting => (AppColors.warn, '连接中…'),
-      DeviceConnectionState.error => (scheme.error, '连接异常'),
-      DeviceConnectionState.disconnected => (scheme.outline, '未连接'),
-    };
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-          decoration: BoxDecoration(
-            color: scheme.surfaceContainer.withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(100),
-            border: Border.all(color: scheme.outlineVariant),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                width: 7,
-                height: 7,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: color,
-                  boxShadow: [
-                    BoxShadow(color: color.withValues(alpha: 0.55), blurRadius: 8),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 7),
-              Text(
-                text,
-                style: TextStyle(
-                    color: scheme.onSurfaceVariant,
-                    fontSize: 12,
-                    letterSpacing: 0.2),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _PageHead extends StatelessWidget {
   const _PageHead();
 
@@ -154,27 +88,10 @@ class _PageHead extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 14, 18, 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '附近设备',
-            style: TextStyle(
-              color: scheme.onSurface,
-              fontSize: 26,
-              fontWeight: FontWeight.w700,
-              letterSpacing: -0.4,
-              height: 1.1,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            '点选设备卡片即可配对连接，无需密码。',
-            style: TextStyle(
-                color: scheme.onSurfaceVariant, fontSize: 13, height: 1.55),
-          ),
-        ],
+      padding: EdgeInsets.fromLTRB(Spacing.pageMargin, 14, Spacing.pageMargin, 16),
+      child: Text(
+        '点选设备卡片即可配对连接，无需密码。',
+        style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13, height: 1.55),
       ),
     );
   }
@@ -188,29 +105,31 @@ class _DeviceList extends StatelessWidget {
   Widget build(BuildContext context) {
     final devices = vm.devices;
     if (devices.isEmpty) {
+      // 首次进入自动搜索：扫描中显示脉冲骨架屏，结束后显示点击扫描入口
       return SliverToBoxAdapter(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 24),
-          child: Center(
-            child: InkWell(
-              onTap: vm.scanning ? null : () => vm.scan(),
-              borderRadius: BorderRadius.circular(100),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-                child: Text(
-                  vm.scanning ? '正在搜索…' : '点击扫描附近设备',
-                  style: TextStyle(
-                    color: vm.scanning
-                        ? Theme.of(context).colorScheme.onSurfaceVariant
-                        : Theme.of(context).colorScheme.primary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
+        child: vm.scanning
+            ? const _DeviceSkeleton()
+            : Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                child: Center(
+                  child: InkWell(
+                    onTap: () => vm.scan(),
+                    borderRadius: BorderRadius.circular(100),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 18, vertical: 8),
+                      child: Text(
+                        '点击扫描附近设备',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.primary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
-          ),
-        ),
       );
     }
     return SliverList(
@@ -237,21 +156,21 @@ class _DeviceCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final active = _isActive;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: Spacing.gap12),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(16),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
           child: Material(
             color: (active ? AppColors.accentSoft : scheme.surfaceContainerLow)
                 .withValues(alpha: 0.6),
             child: InkWell(
-              borderRadius: BorderRadius.circular(22),
+              borderRadius: BorderRadius.circular(16),
               onTap: vm.scanning ? null : () => vm.connect(device),
               child: Container(
-                padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+                padding: const EdgeInsets.all(Spacing.cardPadding),
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(22),
+                  borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: active ? scheme.primary : scheme.outlineVariant,
                   ),
@@ -286,7 +205,7 @@ class _DeviceCard extends StatelessWidget {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                _shortAddr(device.address),
+                                device.address,
                                 style: TextStyle(
                                   color: scheme.onSurfaceVariant,
                                   fontSize: 11,
@@ -323,8 +242,6 @@ class _DeviceCard extends StatelessWidget {
     );
   }
 
-  String _shortAddr(String a) =>
-      a.length > 12 ? '${a.substring(0, 6)}…${a.substring(a.length - 4)}' : a;
 }
 
 /// 断开按钮：仅已连接设备显示。
@@ -425,6 +342,91 @@ class _SignalBars extends StatelessWidget {
   }
 }
 
+/// 扫描中的骨架屏：3 张脉冲呼吸的占位卡片，替代"点击扫描"空态。
+class _DeviceSkeleton extends StatefulWidget {
+  const _DeviceSkeleton();
+
+  @override
+  State<_DeviceSkeleton> createState() => _DeviceSkeletonState();
+}
+
+class _DeviceSkeletonState extends State<_DeviceSkeleton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 800),
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: Tween<double>(begin: 0.5, end: 0.95).animate(
+        CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
+      ),
+      child: Column(
+        children: [
+          for (var i = 0; i < 3; i++) _SkeletonCard(),
+        ],
+      ),
+    );
+  }
+}
+
+/// 骨架占位卡片：灰条模拟品牌 logo / 名称 / 地址 / 右侧状态。
+class _SkeletonCard extends StatelessWidget {
+  const _SkeletonCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final bar = scheme.surfaceContainerHighest;
+    Widget block(double w, double h) => Container(
+          width: w,
+          height: h,
+          decoration: BoxDecoration(
+            color: bar,
+            borderRadius: BorderRadius.circular(4),
+          ),
+        );
+    return Padding(
+      padding: const EdgeInsets.only(bottom: Spacing.gap12),
+      child: Container(
+        height: 100,
+        padding: const EdgeInsets.all(Spacing.cardPadding),
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: scheme.outlineVariant),
+        ),
+        child: Row(
+          children: [
+            block(18, 34), // 品牌 logo 占位
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  block(140, 12), // 设备名
+                  const SizedBox(height: 8),
+                  block(90, 10), // 地址
+                ],
+              ),
+            ),
+            block(40, 12), // 右侧状态/按钮占位
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _ScanNote extends StatelessWidget {
   const _ScanNote({required this.vm});
   final DeviceViewModel vm;
@@ -434,7 +436,7 @@ class _ScanNote extends StatelessWidget {
     if (!vm.scanning && vm.devices.isNotEmpty) return const SizedBox.shrink();
     final scheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(22, 14, 18, 0),
+      padding: EdgeInsets.fromLTRB(Spacing.pageMargin, 14, Spacing.pageMargin, 0),
       child: Row(
         children: [
           if (vm.scanning) ...[
