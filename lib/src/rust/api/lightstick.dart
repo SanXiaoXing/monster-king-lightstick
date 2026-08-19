@@ -4,11 +4,11 @@
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
 import '../frb_generated.dart';
-import 'audio.dart';
+import '../lightstick/effect.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 
-            // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `eq`, `fmt`, `fmt`, `from`
+            // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `fmt`
 
 
             
@@ -19,8 +19,8 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
                     static Future<MusicRhythm>  create()=>RustLib.instance.api.crateApiLightstickMusicRhythmCreate();
 
 
-/// 由音频帧推进一步，返回应下发的颜色与亮度。
- Future<LightOutput>  next({required AudioFrame frame });
+/// 由音量（0..1）推进一步，返回应下发的颜色与亮度。
+ Future<LightOutput>  next({required double volume });
 
 
 /// 单色律动的固定颜色（RGB 3 字节）。
@@ -63,18 +63,4 @@ final double brightness;
                 && rgb == other.rgb&& brightness == other.brightness;
         
             }
-
-/// 律动模式（对应音乐页四个模式按钮）。
-enum RhythmMode {
-                    /// 单色律动：固定 base 色，亮度随音量。
-single,
-/// 七彩律动：15 色板循环，亮度随音量。
-rainbow,
-/// 强烈：七彩 + 亮度增益。
-strong,
-/// 柔和：七彩 + 亮度压缩。
-soft,
-                    ;
-                    
-                }
             

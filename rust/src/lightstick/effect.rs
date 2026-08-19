@@ -77,6 +77,7 @@ pub struct MusicRhythm {
     palette_index: usize,
     frames_since_color: u32,
     /// 换色帧间隔（60ms 下发节流 × 7 ≈ 420ms ≈ 文档 400ms 换色）。
+    /// 仅测试子模块可写（同模块内私有字段可访问）。
     color_interval_frames: u32,
 }
 

@@ -11,6 +11,7 @@ import 'dart:convert';
 import 'error.dart';
 import 'frb_generated.dart';
 import 'frb_generated.io.dart' if (dart.library.js_interop) 'frb_generated.web.dart';
+import 'lightstick/effect.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 
@@ -85,7 +86,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
                 abstract class RustLibApi extends BaseApi {
                   Future<MusicRhythm> crateApiLightstickMusicRhythmCreate();
 
-Future<LightOutput> crateApiLightstickMusicRhythmNext({required MusicRhythm that , required AudioFrame frame });
+Future<LightOutput> crateApiLightstickMusicRhythmNext({required MusicRhythm that , required double volume });
 
 Future<void> crateApiLightstickMusicRhythmSetBaseColor({required MusicRhythm that , required List<int> rgb });
 
@@ -196,11 +197,11 @@ CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_PcmAnalyzerPtr;
         );
         
 
-@override Future<LightOutput> crateApiLightstickMusicRhythmNext({required MusicRhythm that , required AudioFrame frame })  { return handler.executeNormal(NormalTask(
+@override Future<LightOutput> crateApiLightstickMusicRhythmNext({required MusicRhythm that , required double volume })  { return handler.executeNormal(NormalTask(
             callFfi: (port_) {
               
             final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMusicRhythm(that, serializer);
-sse_encode_box_autoadd_audio_frame(frame, serializer);
+sse_encode_f_64(volume, serializer);
             pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 2, port: port_);
             
             },
@@ -211,14 +212,14 @@ sse_encode_box_autoadd_audio_frame(frame, serializer);
         )
         ,
             constMeta: kCrateApiLightstickMusicRhythmNextConstMeta,
-            argValues: [that, frame],
+            argValues: [that, volume],
             apiImpl: this,
         )); }
 
 
         TaskConstMeta get kCrateApiLightstickMusicRhythmNextConstMeta => const TaskConstMeta(
             debugName: "MusicRhythm_next",
-            argNames: ["that", "frame"],
+            argNames: ["that", "volume"],
         );
         
 
@@ -1041,9 +1042,6 @@ isBeat: dco_decode_bool(arr[4]),); }
 @protected bool dco_decode_bool(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
 return raw as bool; }
 
-@protected AudioFrame dco_decode_box_autoadd_audio_frame(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return dco_decode_audio_frame(raw); }
-
 @protected int dco_decode_box_autoadd_u_8(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
 return raw as int; }
 
@@ -1148,9 +1146,6 @@ return AudioFrame(volume: var_volume, bands: var_bands, bass: var_bass, treble: 
 
 @protected bool sse_decode_bool(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
 return deserializer.buffer.getUint8() != 0; }
-
-@protected AudioFrame sse_decode_box_autoadd_audio_frame(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return (sse_decode_audio_frame(deserializer)); }
 
 @protected int sse_decode_box_autoadd_u_8(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
 return (sse_decode_u_8(deserializer)); }
@@ -1276,9 +1271,6 @@ sse_encode_bool(self.isBeat, serializer);
 @protected void sse_encode_bool(bool self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
 serializer.buffer.putUint8(self ? 1 : 0); }
 
-@protected void sse_encode_box_autoadd_audio_frame(AudioFrame self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_audio_frame(self, serializer); }
-
 @protected void sse_encode_box_autoadd_u_8(int self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
 sse_encode_u_8(self, serializer); }
 
@@ -1374,8 +1366,8 @@ case WanError_Invalid(field0: final field0): sse_encode_i_32(3, serializer); sse
                     rustArcDecrementStrongCountPtr: RustLib.instance.api.rust_arc_decrement_strong_count_MusicRhythmPtr,
                 );
 
-                /// 由音频帧推进一步，返回应下发的颜色与亮度。
- Future<LightOutput>  next({required AudioFrame frame })=>RustLib.instance.api.crateApiLightstickMusicRhythmNext(that: this, frame: frame);
+                /// 由音量（0..1）推进一步，返回应下发的颜色与亮度。
+ Future<LightOutput>  next({required double volume })=>RustLib.instance.api.crateApiLightstickMusicRhythmNext(that: this, volume: volume);
 
 
 /// 单色律动的固定颜色（RGB 3 字节）。

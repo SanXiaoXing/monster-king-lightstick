@@ -11,6 +11,7 @@ import 'dart:convert';
 import 'dart:ffi' as ffi;
 import 'error.dart';
 import 'frb_generated.dart';
+import 'lightstick/effect.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_io.dart';
 
 
@@ -47,8 +48,6 @@ CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_PcmAnalyzerPtr => 
 @protected AudioFrame dco_decode_audio_frame(dynamic raw);
 
 @protected bool dco_decode_bool(dynamic raw);
-
-@protected AudioFrame dco_decode_box_autoadd_audio_frame(dynamic raw);
 
 @protected int dco_decode_box_autoadd_u_8(dynamic raw);
 
@@ -108,8 +107,6 @@ CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_PcmAnalyzerPtr => 
 
 @protected bool sse_decode_bool(SseDeserializer deserializer);
 
-@protected AudioFrame sse_decode_box_autoadd_audio_frame(SseDeserializer deserializer);
-
 @protected int sse_decode_box_autoadd_u_8(SseDeserializer deserializer);
 
 @protected double sse_decode_f_64(SseDeserializer deserializer);
@@ -167,8 +164,6 @@ CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_PcmAnalyzerPtr => 
 @protected void sse_encode_audio_frame(AudioFrame self, SseSerializer serializer);
 
 @protected void sse_encode_bool(bool self, SseSerializer serializer);
-
-@protected void sse_encode_box_autoadd_audio_frame(AudioFrame self, SseSerializer serializer);
 
 @protected void sse_encode_box_autoadd_u_8(int self, SseSerializer serializer);
 

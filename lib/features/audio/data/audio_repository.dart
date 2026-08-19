@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:record/record.dart';
 import 'package:wanshou/src/rust/api/audio.dart' as frb_audio;
 import 'package:wanshou/src/rust/api/lightstick.dart' as frb_light;
+import 'package:wanshou/src/rust/lightstick/effect.dart' as frb_effect;
 
 import '../domain/audio_analysis.dart';
 
@@ -92,50 +93,31 @@ class AudioRepository {
     return controller.stream;
   }
 
-  /// 律动模式（UI 四档：单色律动/七彩律动/强烈/柔和）→ Rust 引擎。
-  Future<void> setRhythmMode(String mode) async {
+  /// 律动设置 → Rust 引擎（不可用时静默降级，不阻塞 UI）。
+  Future<void> _swallow(Future<void> Function() fn) async {
     try {
-      final r = await _ensureRhythm();
-      await r.setMode(mode: _modeToFrb(mode));
+      await fn();
     } catch (_) {
-      // Rust 引擎不可用时静默降级（不阻塞 UI）
+      // Rust 引擎不可用时静默降级
     }
   }
+
+  /// 律动模式（UI 四档：单色律动/七彩律动/强烈/柔和）→ Rust 引擎。
+  Future<void> setRhythmMode(String mode) =>
+      _swallow(() async => (await _ensureRhythm()).setMode(mode: _modeToFrb(mode)));
 
   /// 灵敏度 0..1（亮度 = 音量 × 灵敏度）。
-  Future<void> setRhythmSensitivity(double v) async {
-    try {
-      final r = await _ensureRhythm();
-      await r.setSensitivity(v: v);
-    } catch (_) {
-      // 同上，静默降级
-    }
-  }
+  Future<void> setRhythmSensitivity(double v) =>
+      _swallow(() async => (await _ensureRhythm()).setSensitivity(v: v));
 
   /// 单色律动的固定颜色（RGB 三字节）。
-  Future<void> setRhythmBaseColor(int r, int g, int b) async {
-    try {
-      final rh = await _ensureRhythm();
-      await rh.setBaseColor(rgb: [r, g, b]);
-    } catch (_) {
-      // 同上，静默降级
-    }
-  }
+  Future<void> setRhythmBaseColor(int r, int g, int b) =>
+      _swallow(() async => (await _ensureRhythm()).setBaseColor(rgb: [r, g, b]));
 
-  /// 音频帧 → 律动灯效（Rust 引擎计算颜色与亮度）。
+  /// 音量帧 → 律动灯效（Rust 引擎只读音量，亮度 = 音量 × 灵敏度）。
   Future<RhythmOutput> nextRhythm(AudioFrame frame) async {
     final r = await _ensureRhythm();
-    final out = await r.next(
-      frame: frb_audio.AudioFrame(
-        volume: frame.volume,
-        bands: frame.bands is Float64List
-            ? frame.bands as Float64List
-            : Float64List.fromList(frame.bands),
-        bass: frame.bass,
-        treble: frame.treble,
-        isBeat: frame.isBeat,
-      ),
-    );
+    final out = await r.next(volume: frame.volume);
     return RhythmOutput(rgb: out.rgb, brightness: out.brightness);
   }
 
@@ -148,11 +130,11 @@ class AudioRepository {
         isBeat: f.isBeat,
       );
 
-  static frb_light.RhythmMode _modeToFrb(String m) => switch (m) {
-        '七彩律动' => frb_light.RhythmMode.rainbow,
-        '强烈' => frb_light.RhythmMode.strong,
-        '柔和' => frb_light.RhythmMode.soft,
-        _ => frb_light.RhythmMode.single,
+  static frb_effect.RhythmMode _modeToFrb(String m) => switch (m) {
+        '七彩律动' => frb_effect.RhythmMode.rainbow,
+        '强烈' => frb_effect.RhythmMode.strong,
+        '柔和' => frb_effect.RhythmMode.soft,
+        _ => frb_effect.RhythmMode.single,
       };
 
   /// 停止监听并释放采集器。

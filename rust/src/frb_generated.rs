@@ -106,7 +106,7 @@ fn wire__crate__api__lightstick__MusicRhythm_next_impl(
             let api_that = <RustOpaqueMoi<
                 flutter_rust_bridge::for_generated::RustAutoOpaqueInner<MusicRhythm>,
             >>::sse_decode(&mut deserializer);
-            let api_frame = <crate::api::audio::AudioFrame>::sse_decode(&mut deserializer);
+            let api_volume = <f64>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
                 transform_result_sse::<_, ()>((move || {
@@ -125,7 +125,7 @@ fn wire__crate__api__lightstick__MusicRhythm_next_impl(
                     }
                     let mut api_that_guard = api_that_guard.unwrap();
                     let output_ok = Result::<_, ()>::Ok(
-                        crate::api::lightstick::MusicRhythm::next(&mut *api_that_guard, api_frame),
+                        crate::api::lightstick::MusicRhythm::next(&mut *api_that_guard, api_volume),
                     )?;
                     Ok(output_ok)
                 })())
@@ -213,7 +213,7 @@ fn wire__crate__api__lightstick__MusicRhythm_set_mode_impl(
             let api_that = <RustOpaqueMoi<
                 flutter_rust_bridge::for_generated::RustAutoOpaqueInner<MusicRhythm>,
             >>::sse_decode(&mut deserializer);
-            let api_mode = <crate::api::lightstick::RhythmMode>::sse_decode(&mut deserializer);
+            let api_mode = <crate::lightstick::effect::RhythmMode>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
                 transform_result_sse::<_, ()>((move || {
@@ -1479,15 +1479,15 @@ impl SseDecode for Option<u8> {
     }
 }
 
-impl SseDecode for crate::api::lightstick::RhythmMode {
+impl SseDecode for crate::lightstick::effect::RhythmMode {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut inner = <i32>::sse_decode(deserializer);
         return match inner {
-            0 => crate::api::lightstick::RhythmMode::Single,
-            1 => crate::api::lightstick::RhythmMode::Rainbow,
-            2 => crate::api::lightstick::RhythmMode::Strong,
-            3 => crate::api::lightstick::RhythmMode::Soft,
+            0 => crate::lightstick::effect::RhythmMode::Single,
+            1 => crate::lightstick::effect::RhythmMode::Rainbow,
+            2 => crate::lightstick::effect::RhythmMode::Strong,
+            3 => crate::lightstick::effect::RhythmMode::Soft,
             _ => unreachable!("Invalid variant for RhythmMode: {}", inner),
         };
     }
@@ -1796,7 +1796,7 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::protocol::LightingEffect>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
-impl flutter_rust_bridge::IntoDart for crate::api::lightstick::RhythmMode {
+impl flutter_rust_bridge::IntoDart for crate::lightstick::effect::RhythmMode {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         match self {
             Self::Single => 0.into_dart(),
@@ -1808,13 +1808,13 @@ impl flutter_rust_bridge::IntoDart for crate::api::lightstick::RhythmMode {
     }
 }
 impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
-    for crate::api::lightstick::RhythmMode
+    for crate::lightstick::effect::RhythmMode
 {
 }
-impl flutter_rust_bridge::IntoIntoDart<crate::api::lightstick::RhythmMode>
-    for crate::api::lightstick::RhythmMode
+impl flutter_rust_bridge::IntoIntoDart<crate::lightstick::effect::RhythmMode>
+    for crate::lightstick::effect::RhythmMode
 {
-    fn into_into_dart(self) -> crate::api::lightstick::RhythmMode {
+    fn into_into_dart(self) -> crate::lightstick::effect::RhythmMode {
         self
     }
 }
@@ -2011,15 +2011,15 @@ impl SseEncode for Option<u8> {
     }
 }
 
-impl SseEncode for crate::api::lightstick::RhythmMode {
+impl SseEncode for crate::lightstick::effect::RhythmMode {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <i32>::sse_encode(
             match self {
-                crate::api::lightstick::RhythmMode::Single => 0,
-                crate::api::lightstick::RhythmMode::Rainbow => 1,
-                crate::api::lightstick::RhythmMode::Strong => 2,
-                crate::api::lightstick::RhythmMode::Soft => 3,
+                crate::lightstick::effect::RhythmMode::Single => 0,
+                crate::lightstick::effect::RhythmMode::Rainbow => 1,
+                crate::lightstick::effect::RhythmMode::Strong => 2,
+                crate::lightstick::effect::RhythmMode::Soft => 3,
                 _ => {
                     unimplemented!("");
                 }
