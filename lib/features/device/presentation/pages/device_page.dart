@@ -593,7 +593,7 @@ class _ScanActionButton extends StatefulWidget {
 }
 
 class _ScanActionButtonState extends State<_ScanActionButton>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late final AnimationController _spin;
   late final AnimationController _bounce;
 

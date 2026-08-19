@@ -1,11 +1,7 @@
 //! # lightstick — 荧光棒领域逻辑
 //!
-//! 设备状态机、效果编排、控制流程。编排 [`crate::bluetooth`] 与
-//! [`crate::protocol`]，不直接拼字节。
-//!
-//! `ponytail:` 骨架模块，待实现。连续动画（聚会/星空/跑马灯的 100ms
-//! 帧循环）在此层做，参考 Kotlin 版 continuousAnimJob 时序。
+//! 已实现：音乐律动引擎（[`effect`]，对齐 docs/design/music.md）。
+//! 设备状态机 / 连接编排暂未落地（当前由 Flutter 侧 DeviceViewModel 编排）；
+//! 需要时在此实现，编排 [`crate::bluetooth`] 与 [`crate::protocol`]。
 
-pub mod controller;
-pub mod device;
 pub mod effect;

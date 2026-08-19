@@ -18,18 +18,6 @@ class Spacing {
   /// 卡片 / 区块之间（松）。
   static const double gap16 = 16;
 
-  /// 卡片内部行间距 / 字段之间。
-  static const double gap10 = 10;
-
-  /// 小元素间距（胶囊内 / 按钮间）。
-  static const double gap8 = 8;
-
-  /// 字段标签 → 控件。
-  static const double gap6 = 6;
-
-  /// 标签内图标 ↔ 文字。
-  static const double gap4 = 4;
-
   /// 滚动内容底部留白，容纳 FAB / 主创建按钮，避免被遮挡。
   static const double bottomSafe = 120;
 }

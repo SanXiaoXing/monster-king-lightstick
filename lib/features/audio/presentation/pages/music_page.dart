@@ -12,7 +12,6 @@ import '../../../device/data/device_repository.dart';
 import '../../../device/presentation/device_view_model.dart';
 import '../../../lighting/data/lighting_repository.dart';
 import '../../../lighting/domain/lighting_effect.dart';
-import '../../../settings/settings_store.dart';
 import '../../data/audio_repository.dart';
 import '../../domain/audio_analysis.dart';
 import '../widgets/circular_visualizer.dart';
@@ -43,17 +42,11 @@ class _MusicPageState extends State<MusicPage> {
   final ValueNotifier<AudioFrame?> _frameNotifier = ValueNotifier(null);
   StreamSubscription<AudioFrame>? _sub;
 
-  // 律动模式：单色 / 七彩 / 强烈 / 柔和（初始值来自设置页默认）
-  String _mode = SettingsStore.defaultMode;
-  double _sensitivity = SettingsStore.defaultSensitivity;
+  // 律动模式：单色 / 七彩 / 强烈 / 柔和（设置页不再提供默认值写入，
+  // 直接使用常量默认；用户在本页切换后仅本次会话生效）
+  String _mode = '单色律动';
+  double _sensitivity = 0.6;
   bool _active = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _mode = SettingsStore.readMode();
-    _sensitivity = SettingsStore.readSensitivity();
-  }
 
   /// 荧光棒下发节流：分析帧 ~86fps（50% 重叠窗），BLE writeNoResponse
   /// 实测可稳定承载 ~16Hz；取 60ms 在跟手性与无线可靠性间折中。
@@ -73,7 +66,7 @@ class _MusicPageState extends State<MusicPage> {
   }
 
   bool _ensureConnected() {
-    if (!widget.viewModel.status.isConnected) {
+    if (!widget.viewModel.isConnected) {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(const SnackBar(content: Text('请先在「连接」Tab 配对应援棒')));
@@ -107,7 +100,7 @@ class _MusicPageState extends State<MusicPage> {
   /// 本页只负责节流与下发。
   void _syncStick(AudioFrame f) {
     final device = widget.viewModel.activeDevice;
-    if (device == null || !widget.viewModel.status.isConnected) return;
+    if (device == null || !widget.viewModel.isConnected) return;
     if (_stickBusy) return; // 上一次写入未完成：丢帧防积压
     final now = DateTime.now();
     if (_lastStickSend != null &&
@@ -228,7 +221,7 @@ class _MusicPageState extends State<MusicPage> {
       appBar: AppTopBar(title: '音乐律动'),
       body: ListenableBuilder(
         listenable: widget.viewModel,
-        builder: (context, _) => widget.viewModel.status.isConnected
+        builder: (context, _) => widget.viewModel.isConnected
             ? content
             : ConnectGuardView(onGoConnect: widget.onGoConnect),
       ),
@@ -300,7 +293,7 @@ class _StatusDot extends StatelessWidget {
 /// 选中：accent 填充 + 白字 + 阴影，未选：透明 + muted 字。
 /// `value` 保留 Rust 律动引擎所需的完整模式名（如「单色律动」），
 /// `label` 是短显名（与 prototype 的「单色 / 七彩 / 强烈 / 柔和」一致）。
-/// 功能不变：mode 状态机、SettingsStore 读写路径不变。
+/// 功能不变：mode 状态机与切换路径不变。
 /// 律动模式：1×4 段按钮。
 /// 采用与 [GlassTabBar._SelectedPill] 严格一致的滑动胶囊机机制：
 /// - 外层 pill 容器固定不变，选中态不再是「该 cell 变色」，
@@ -610,7 +603,7 @@ class _IosSwitch extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Semantics(
-      label: '音乐响应',
+      label: '音乐响应开关',
       toggled: active,
       child: GestureDetector(
         onTap: onTap,

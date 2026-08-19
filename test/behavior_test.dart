@@ -20,7 +20,6 @@ import 'package:wanshou/features/device/presentation/device_view_model.dart';
 import 'package:wanshou/features/device/presentation/pages/device_page.dart';
 import 'package:wanshou/features/home/presentation/widgets/glass_tab_bar.dart';
 import 'package:wanshou/features/lighting/presentation/pages/color_picker_page.dart';
-import 'package:wanshou/features/lighting/presentation/pages/seat_binding_page.dart';
 import 'package:wanshou/features/settings/settings_page.dart';
 
 /// 伪造仓库：蓝牙开启；connected=true 时上报一台已连接设备。
@@ -123,7 +122,7 @@ void main() {
     expect(theme().brightness, Brightness.light);
 
     // 回跟随系统
-    await tester.tap(find.text('跟随系统'));
+    await tester.tap(find.text('跟随'));
     await tester.pumpAndSettle();
     expect(app().themeMode, ThemeMode.system);
     expect(theme().brightness, Brightness.light);
@@ -131,35 +130,35 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets('设置页：分组渲染、默认值', (tester) async {
+  testWidgets('设置页：四项分组渲染（显示模式/已连接设备/温馨提示/关于）', (tester) async {
     final vm = await _vm(connected: true);
     addTearDown(vm.dispose);
     await tester.pumpWidget(_wrap(SettingsPage(viewModel: vm)));
     await tester.pump();
 
-    // 主题模式（顶部）
-    expect(find.text('跟随系统'), findsOneWidget);
+    // 显示模式（顶部）：3 档 pill
+    expect(find.text('跟随'), findsOneWidget);
+    expect(find.text('浅色'), findsOneWidget);
+    expect(find.text('深色'), findsOneWidget);
 
-    // 我的设备分组
-    await tester.scrollUntilVisible(find.text('清除设备记录'), 200);
-    expect(find.text('清除设备记录'), findsOneWidget);
+    // 已连接设备分组：连接态显示设备名
+    expect(find.text('已连接'), findsOneWidget);
 
-    // 灯光偏好分组：默认亮度 80%
-    await tester.scrollUntilVisible(find.text('默认亮度'), 200);
-    expect(find.text('80%'), findsOneWidget);
+    // 温馨提示入口（滚动到唯一副标题，避免与分组标签同名歧义）
+    await tester.scrollUntilVisible(find.text('阅读安全提示'), 200);
+    expect(find.text('温馨提示'), findsWidgets);
+    expect(find.text('阅读安全提示'), findsOneWidget);
 
-    // 音频律动分组：默认律动模式（单色）+ 默认灵敏度 60%
-    await tester.scrollUntilVisible(find.text('默认律动模式'), 200);
-    expect(find.text('单色'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('默认灵敏度'), 200);
-    expect(find.text('60%'), findsOneWidget);
+    // 关于分组
+    await tester.scrollUntilVisible(find.text('万兽之王'), 200);
+    expect(find.text('万兽之王'), findsOneWidget);
+    expect(find.text('v1.0.0'), findsOneWidget);
 
-    // 无用 stub 项已删除：不再渲染任何待构建占位入口
-    expect(find.text('启动灯效'), findsNothing);
-    expect(find.text('记忆上次颜色'), findsNothing);
-    expect(find.text('频谱样式'), findsNothing);
-    expect(find.text('开源协议'), findsNothing);
-    expect(find.text('反馈与建议'), findsNothing);
+    // 已删除的项不再渲染
+    expect(find.text('清除设备记录'), findsNothing);
+    expect(find.text('默认亮度'), findsNothing);
+    expect(find.text('默认灵敏度'), findsNothing);
+    expect(find.text('座位绑定'), findsNothing);
   });
 
   testWidgets('调色盘：默认 #0A84FF，色环取色/hex 回填/亮度滑杆', (tester) async {
@@ -222,25 +221,6 @@ void main() {
     expect(find.byType(DevicePage), findsNothing);
   });
 
-  testWidgets('座位绑定：区域+座位号 → 绑定成功提示', (tester) async {
-    final vm = await _vm(connected: true);
-    addTearDown(vm.dispose);
-    await tester.pumpWidget(_wrap(SeatBindingPage(viewModel: vm)));
-    await tester.pump();
-
-    await tester.ensureVisible(find.text('看台 B 区'));
-    await tester.pump();
-    await tester.tap(find.text('看台 B 区'));
-    await tester.pump();
-    await tester.ensureVisible(find.text('绑定座位'));
-    await tester.pump();
-    await tester.enterText(find.byType(TextField), 'A区 12排 08号');
-    await tester.tap(find.text('绑定座位'));
-    await tester.pump();
-
-    expect(find.text('✓ 座位已绑定：看台 B 区 A区 12排 08号'), findsOneWidget);
-  });
-
   testWidgets('音乐律动：连接后点击开始 → 麦克风不可用 → 提示采集失败，状态不变',
       (tester) async {
     // 测试环境无 record 原生插件：mock 平台通道——构造（create）成功，
@@ -259,19 +239,21 @@ void main() {
     await tester.pumpWidget(_wrap(MusicPage(viewModel: vm)));
     await tester.pump();
 
-    // 默认已暂停
-    expect(find.text('已暂停'), findsOneWidget);
+    // 默认未开启：音乐响应开关处于 off（语义 toggled=false）
+    expect(find.text('音乐响应'), findsOneWidget);
 
-    // 点击开始：权限请求失败 → 提示无法采集，状态不变
-    await tester.ensureVisible(find.text('开始律动'));
+    // 点击开关（Semantics label 定位自定义 iOS 开关）
+    // 权限请求失败 → 提示无法采集，状态不变（开关仍 off）
+    await tester.ensureVisible(find.bySemanticsLabel('音乐响应开关'));
     await tester.pump();
-    await tester.tap(find.text('开始律动'));
+    await tester.tap(find.bySemanticsLabel('音乐响应开关'));
     for (var i = 0; i < 4; i++) {
       await tester.pump(const Duration(milliseconds: 50));
     }
     expect(find.textContaining('无法采集音乐'), findsOneWidget);
-    // 状态未变，按钮仍是开始
-    expect(find.text('开始律动'), findsOneWidget);
+    // 状态未变：开关语义仍是 toggled=false
+    final sw = tester.widget<Semantics>(find.bySemanticsLabel('音乐响应开关'));
+    expect(sw.properties.toggled, isFalse);
   });
 
   testWidgets('音乐律动：未连接时正文锁定为连接引导', (tester) async {
@@ -282,7 +264,7 @@ void main() {
 
     // 未连接：ConnectGuardView 替换正文，律动控件不可见
     expect(find.text('尚未连接应援棒'), findsOneWidget);
-    expect(find.text('七彩律动'), findsNothing);
-    expect(find.text('开始律动'), findsNothing);
+    expect(find.text('七彩'), findsNothing);
+    expect(find.text('音乐响应'), findsNothing);
   });
 }

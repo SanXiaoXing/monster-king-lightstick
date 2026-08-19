@@ -49,7 +49,7 @@ void main() {
     // 切到设置页
     await tester.tap(dockTab('设置'));
     await settle(tester);
-    expect(find.text('管理设备、主题、灯光与音频偏好。'), findsOneWidget);
+    expect(find.text('管理显示模式、设备状态与提示。'), findsOneWidget);
 
     // 卸载以释放页面资源
     await tester.pumpWidget(const SizedBox());

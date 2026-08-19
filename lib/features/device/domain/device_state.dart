@@ -46,19 +46,3 @@ enum DeviceConnectionState {
   error,
 }
 
-/// 蓝牙适配器 + 连接状态的组合视图，供 UI 一次性展示。
-class BluetoothStatus {
-  const BluetoothStatus({
-    required this.adapter,
-    required this.connection,
-    this.deviceName,
-  });
-
-  final BluetoothAdapterState adapter;
-  final DeviceConnectionState connection;
-
-  /// 已连接设备名（未连接时为 null）。
-  final String? deviceName;
-
-  bool get isConnected => connection == DeviceConnectionState.connected;
-}

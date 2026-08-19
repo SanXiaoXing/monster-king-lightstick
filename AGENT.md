@@ -97,26 +97,23 @@ lib/
 ├── core/
 │   ├── bridge/rust_bridge.dart       # Rust 运行时门面 [已实现]
 │   ├── config/app_config.dart        # 应用常量 [已实现]
-│   ├── error/app_exception.dart      # 统一异常 [骨架]
 │   └── storage/local_storage.dart    # 持久化 [已实现]（shared_preferences；主题模式已接入）
 ├── features/
 │   ├── home/presentation/pages/home_page.dart   # 主页 [已实现]（Liquid Glass 悬浮胶囊 Dock + 页面切换过渡）
 │   ├── home/presentation/widgets/glass_tab_bar.dart # 玻璃 Dock 导航栏 [已实现]（毛玻璃壳 + 选中态弹簧胶囊）
-│   ├── home/presentation/protocol_demo_page.dart # 协议验证页 [已实现]（设置页入口）
 │   ├── device/                       # data/domain/presentation [已实现：flutter_blue_plus 于 Repository 层]
-│   ├── lighting/                     # domain [骨架]；presentation：调色盘/座位绑定/灯光效果 [已实现]
+│   ├── lighting/                     # domain [已实现：LightingFx 枚举]；presentation：调色盘 [已实现：圆形色环 + hex + 亮度 + 8 灯效单列]
 │   ├── audio/                        # domain [已实现：AudioFrame/RhythmOutput 模型，分析已迁 Rust]；data [已实现：record 采集 + Rust 分析/律动]；presentation：音乐调光 [已实现]
-│   ├── settings/                     # settings_page.dart [已实现]（主题/设备/灯光/音频默认值，无占位项）；settings_store.dart [已实现]（默认值持久化，音乐页/调色页初始值）
-│   └── about/                        # tips_page 温馨提示 [已实现]；about_page [骨架]
+│   ├── settings/                     # settings_page.dart [已实现]（仅 4 项：显示模式滑动胶囊/已连接设备/温馨提示/关于）
+│   └── about/                        # tips_page 温馨提示 [已实现]
 ├── shared/
-│   ├── theme/spacing.dart            # 统一间距系统（pageMargin/cardPadding/gap 档位）[已实现]
+│   ├── theme/spacing.dart            # 统一间距系统（pageMargin/cardPadding/gap12/gap16/bottomSafe）[已实现]
 │   ├── widgets/app_top_bar.dart      # 统一顶栏 AppTopBar [已实现]
 │   ├── widgets/app_icon_button.dart  # 顶栏图标按钮 36×36 [已实现]
 │   ├── widgets/card_decoration.dart  # 统一卡片圆角/描边 [已实现]
 │   ├── widgets/connect_guard_view.dart # 未连接引导视图（调色/音乐页）[已实现]
-│   ├── widgets/app_button.dart       # [骨架]
-│   ├── widgets/slider_row.dart       # 带标签滑杆行（亮度/灵敏度/速度共用）[已实现]
-│   └── components/color_picker.dart  # [骨架]
+│   ├── widgets/brand_logo.dart       # 像素风品牌 Logo（CustomPaint 复刻 SVG）[已实现]
+│   └── widgets/slider_row.dart       # 带标签滑杆行（亮度/灵敏度共用）[已实现]
 ├── src/rust/                         # frb 生成，禁改
 └── main.dart                         # RustBridge.init + 存储/主题初始化 + runApp [已实现]
 ```
@@ -126,17 +123,15 @@ lib/
 ```
 src/
 ├── api/
-│   ├── protocol.rs                   # 协议构造 25 函数 [已实现]
+│   ├── protocol.rs                   # 协议构造（lighting_command_body / build_packet / hex_to_bytes + LightingEffect）[已实现]
 │   ├── simple.rs                     # frb 初始化钩子（init_app）[已实现]
-│   ├── bluetooth.rs                 # 能力入口 [骨架]
-│   ├── lightstick.rs                # 音乐律动引擎（MusicRhythm→LightOutput）[已实现]；其余 [骨架]
+│   ├── lightstick.rs                # 音乐律动引擎（MusicRhythm→LightOutput）[已实现]
 │   ├── audio.rs                     # 音频分析（PcmAnalyzer→AudioFrame）[已实现]
 │   └── mod.rs
-├── bluetooth/                        # scanner/connection/characteristic [骨架]
-├── protocol/                         # 门面：mod+packet+command [透传]，decoder/encoder [骨架]
-├── lightstick/                       # effect：音乐律动引擎（亮度=音量×灵敏度、15 色板循环，对齐 docs/design/music.md）[已实现]；device/controller [骨架]
-├── audio/                            # analyzer：PCM16→音量/频带/节拍帧（Dart 版移植）[已实现]；spectrum [骨架]
-├── error.rs                          # WanError 统一错误 [已实现]（AES API 已 Result 上报）
+├── protocol/                         # 门面：mod + packet + command [透传]，全量 re-export wan_protocol
+├── lightstick/                       # effect：音乐律动引擎（亮度=音量×灵敏度、15 色板循环，对齐 docs/design/music.md）[已实现]
+├── audio/                            # analyzer：PCM16→音量/频带/节拍帧（Dart 版移植）[已实现]
+├── error.rs                          # WanError 统一错误 [已实现]
 ├── frb_generated.rs                  # 生成，禁改
 └── lib.rs
 ```

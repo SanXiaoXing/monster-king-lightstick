@@ -10,7 +10,6 @@ import '../../../../shared/widgets/connect_guard_view.dart';
 import '../../../../shared/widgets/slider_row.dart';
 import '../../../device/data/device_repository.dart';
 import '../../../device/presentation/device_view_model.dart';
-import '../../../settings/settings_store.dart';
 import '../../data/lighting_repository.dart';
 import '../../domain/lighting_effect.dart';
 
@@ -36,20 +35,14 @@ class _ColorPickerPageState extends State<ColorPickerPage> {
 
   // HSV 状态：默认 #0A84FF（iOS 蓝）
   double _hue = 210, _sat = 1, _val = 1;
-  double _brightness = SettingsStore.defaultBrightness;
+  // 初始亮度默认 80%（设置页不再提供写入，本页滑杆仅本次会话生效）
+  double _brightness = 0.8;
   LightingFx _fx = LightingFx.constantlyOn;
   final _hexCtrl = TextEditingController(text: '0A84FF');
   Timer? _colorDebounce;
   DateTime? _lastColorSent;
   bool _colorSending = false;
   static const _liveInterval = Duration(milliseconds: 70);
-
-  @override
-  void initState() {
-    super.initState();
-    // 初始亮度来自设置页默认
-    _brightness = SettingsStore.readBrightness();
-  }
 
   @override
   void dispose() {
@@ -82,7 +75,7 @@ class _ColorPickerPageState extends State<ColorPickerPage> {
   }
 
   bool _ensureConnected() {
-    if (!widget.viewModel.status.isConnected) {
+    if (!widget.viewModel.isConnected) {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(const SnackBar(content: Text('请先在「连接」Tab 配对应援棒')));
@@ -236,7 +229,7 @@ class _ColorPickerPageState extends State<ColorPickerPage> {
       appBar: AppTopBar(title: '调色盘'),
       body: ListenableBuilder(
         listenable: widget.viewModel,
-        builder: (context, _) => widget.viewModel.status.isConnected
+        builder: (context, _) => widget.viewModel.isConnected
             ? content
             : ConnectGuardView(onGoConnect: widget.onGoConnect),
       ),

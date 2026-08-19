@@ -9,7 +9,6 @@ import 'api/protocol.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi' as ffi;
-import 'error.dart';
 import 'frb_generated.dart';
 import 'lightstick/effect.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_io.dart';
@@ -49,19 +48,13 @@ CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_PcmAnalyzerPtr => 
 
 @protected bool dco_decode_bool(dynamic raw);
 
-@protected int dco_decode_box_autoadd_u_8(dynamic raw);
-
 @protected double dco_decode_f_64(dynamic raw);
 
 @protected int dco_decode_i_32(dynamic raw);
 
-@protected IosBroadcastResult dco_decode_ios_broadcast_result(dynamic raw);
-
 @protected LightOutput dco_decode_light_output(dynamic raw);
 
 @protected LightingEffect dco_decode_lighting_effect(dynamic raw);
-
-@protected List<String> dco_decode_list_String(dynamic raw);
 
 @protected List<AudioFrame> dco_decode_list_audio_frame(dynamic raw);
 
@@ -71,23 +64,15 @@ CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_PcmAnalyzerPtr => 
 
 @protected Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
 
-@protected int? dco_decode_opt_box_autoadd_u_8(dynamic raw);
-
 @protected RhythmMode dco_decode_rhythm_mode(dynamic raw);
 
-@protected int dco_decode_u_16(dynamic raw);
-
 @protected int dco_decode_u_32(dynamic raw);
-
-@protected BigInt dco_decode_u_64(dynamic raw);
 
 @protected int dco_decode_u_8(dynamic raw);
 
 @protected void dco_decode_unit(dynamic raw);
 
 @protected BigInt dco_decode_usize(dynamic raw);
-
-@protected WanError dco_decode_wan_error(dynamic raw);
 
 @protected MusicRhythm sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMusicRhythm(SseDeserializer deserializer);
 
@@ -107,19 +92,13 @@ CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_PcmAnalyzerPtr => 
 
 @protected bool sse_decode_bool(SseDeserializer deserializer);
 
-@protected int sse_decode_box_autoadd_u_8(SseDeserializer deserializer);
-
 @protected double sse_decode_f_64(SseDeserializer deserializer);
 
 @protected int sse_decode_i_32(SseDeserializer deserializer);
 
-@protected IosBroadcastResult sse_decode_ios_broadcast_result(SseDeserializer deserializer);
-
 @protected LightOutput sse_decode_light_output(SseDeserializer deserializer);
 
 @protected LightingEffect sse_decode_lighting_effect(SseDeserializer deserializer);
-
-@protected List<String> sse_decode_list_String(SseDeserializer deserializer);
 
 @protected List<AudioFrame> sse_decode_list_audio_frame(SseDeserializer deserializer);
 
@@ -129,23 +108,15 @@ CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_PcmAnalyzerPtr => 
 
 @protected Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
 
-@protected int? sse_decode_opt_box_autoadd_u_8(SseDeserializer deserializer);
-
 @protected RhythmMode sse_decode_rhythm_mode(SseDeserializer deserializer);
 
-@protected int sse_decode_u_16(SseDeserializer deserializer);
-
 @protected int sse_decode_u_32(SseDeserializer deserializer);
-
-@protected BigInt sse_decode_u_64(SseDeserializer deserializer);
 
 @protected int sse_decode_u_8(SseDeserializer deserializer);
 
 @protected void sse_decode_unit(SseDeserializer deserializer);
 
 @protected BigInt sse_decode_usize(SseDeserializer deserializer);
-
-@protected WanError sse_decode_wan_error(SseDeserializer deserializer);
 
 @protected void sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMusicRhythm(MusicRhythm self, SseSerializer serializer);
 
@@ -165,19 +136,13 @@ CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_PcmAnalyzerPtr => 
 
 @protected void sse_encode_bool(bool self, SseSerializer serializer);
 
-@protected void sse_encode_box_autoadd_u_8(int self, SseSerializer serializer);
-
 @protected void sse_encode_f_64(double self, SseSerializer serializer);
 
 @protected void sse_encode_i_32(int self, SseSerializer serializer);
 
-@protected void sse_encode_ios_broadcast_result(IosBroadcastResult self, SseSerializer serializer);
-
 @protected void sse_encode_light_output(LightOutput self, SseSerializer serializer);
 
 @protected void sse_encode_lighting_effect(LightingEffect self, SseSerializer serializer);
-
-@protected void sse_encode_list_String(List<String> self, SseSerializer serializer);
 
 @protected void sse_encode_list_audio_frame(List<AudioFrame> self, SseSerializer serializer);
 
@@ -187,23 +152,15 @@ CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_PcmAnalyzerPtr => 
 
 @protected void sse_encode_list_prim_u_8_strict(Uint8List self, SseSerializer serializer);
 
-@protected void sse_encode_opt_box_autoadd_u_8(int? self, SseSerializer serializer);
-
 @protected void sse_encode_rhythm_mode(RhythmMode self, SseSerializer serializer);
 
-@protected void sse_encode_u_16(int self, SseSerializer serializer);
-
 @protected void sse_encode_u_32(int self, SseSerializer serializer);
-
-@protected void sse_encode_u_64(BigInt self, SseSerializer serializer);
 
 @protected void sse_encode_u_8(int self, SseSerializer serializer);
 
 @protected void sse_encode_unit(void self, SseSerializer serializer);
 
 @protected void sse_encode_usize(BigInt self, SseSerializer serializer);
-
-@protected void sse_encode_wan_error(WanError self, SseSerializer serializer);
                 }
                 
 

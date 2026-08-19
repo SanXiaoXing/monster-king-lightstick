@@ -11,16 +11,11 @@
 //!                     └→  bluetooth/  →  BLE
 //! ```
 //!
-//! 内部模块（bluetooth/lightstick/audio）统一走 `crate::protocol::`，
-//! 不直接 `use wan_protocol` —— 将来若把 wan_protocol 物理并入本 crate，
-//! 调用方零改动。
-//!
-//! `ponytail:` 门面仅透传，不添加任何包装逻辑；新协议能力先落
-//! wan_protocol（带测试向量），再在这里补 re-export。
+//! 内部模块统一走 `crate::protocol::`，不直接 `use wan_protocol` —— 将来若把
+//! wan_protocol 物理并入本 crate，调用方零改动。响应解码（notify 原始字节 →
+//! 结构化响应）尚未逆向完成，拿到真机抓包后再补 decoder。
 
 pub mod command;
-pub mod decoder;
-pub mod encoder;
 pub mod packet;
 
 /// 全量透传 wan_protocol 公共 API（crc32/aes/ed25519/broadcast/ota/

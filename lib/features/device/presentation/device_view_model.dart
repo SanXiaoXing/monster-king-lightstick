@@ -24,19 +24,14 @@ class DeviceViewModel extends ChangeNotifier {
   StreamSubscription<BluetoothAdapterState>? _adapterSub;
   StreamSubscription<DeviceConnectionState>? _connSub;
 
-  BluetoothAdapterState get adapter => _adapter;
   DeviceConnectionState get connection => _connection;
   List<Lightstick> get devices => _devices;
   Lightstick? get activeDevice => _activeDevice;
   bool get scanning => _scanning;
   String? get error => _error;
 
-  /// 组合状态（供 UI 一次性展示）。
-  BluetoothStatus get status => BluetoothStatus(
-        adapter: _adapter,
-        connection: _connection,
-        deviceName: _activeDevice?.name ?? _activeDevice?.address,
-      );
+  /// 是否已连接设备（UI 统一用这个，不再暴露组合状态对象）。
+  bool get isConnected => _connection == DeviceConnectionState.connected;
 
   /// 初始化：订阅适配器状态流，恢复已连接设备，首次进入自动搜索。
   Future<void> init() async {

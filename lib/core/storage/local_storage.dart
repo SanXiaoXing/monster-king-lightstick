@@ -22,9 +22,4 @@ class LocalStorage {
   static Future<void> write(String key, String value) async {
     await _prefs?.setString(key, value);
   }
-
-  /// 删除键。
-  static Future<void> remove(String key) async {
-    await _prefs?.remove(key);
-  }
 }

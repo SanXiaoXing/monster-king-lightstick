@@ -80,7 +80,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   ListenableBuilder(
                     listenable: vm,
                     builder: (context, _) {
-                      final connected = vm.status.isConnected;
+                      final connected = vm.isConnected;
                       final name = vm.activeDevice?.name ??
                           vm.activeDevice?.address ??
                           '未连接';
