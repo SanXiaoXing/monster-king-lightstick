@@ -4,6 +4,9 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_theme.dart';
+import '../../../../shared/theme/spacing.dart';
+import '../../../../shared/widgets/app_top_bar.dart';
+import '../../../../shared/widgets/connect_guard_view.dart';
 import '../../../../shared/widgets/slider_row.dart';
 import '../../../device/data/device_repository.dart';
 import '../../../device/presentation/device_view_model.dart';
@@ -14,12 +17,14 @@ import '../../domain/lighting_effect.dart';
 /// 调色页（Dock「调色」Tab）。
 ///
 /// 对齐原型调色屏：圆形 RGB 色环 + hex 输入 + 亮度滑杆 + 9 灯效 3×3。
-/// `embedded=true` 时无 AppBar，由 Dock 壳托管。
+/// 顶部统一用 [AppTopBar]；未连接设备时正文锁定为连接引导。
 class ColorPickerPage extends StatefulWidget {
-  const ColorPickerPage({super.key, required this.viewModel, this.embedded = false});
+  const ColorPickerPage({super.key, required this.viewModel, this.onGoConnect});
 
   final DeviceViewModel viewModel;
-  final bool embedded;
+
+  /// 未连接时「去连接」按钮回调（Dock 宿主切换 Tab；独立页可不传）。
+  final VoidCallback? onGoConnect;
 
   @override
   State<ColorPickerPage> createState() => _ColorPickerPageState();
@@ -170,7 +175,7 @@ class _ColorPickerPageState extends State<ColorPickerPage> {
         slivers: [
           SliverToBoxAdapter(child: _Heading()),
           SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 18),
+            padding: EdgeInsets.symmetric(horizontal: Spacing.pageMargin),
             sliver: SliverToBoxAdapter(
               child: Column(
                 children: [
@@ -219,16 +224,22 @@ class _ColorPickerPageState extends State<ColorPickerPage> {
               ),
             ),
           ),
+          // extendBody 下内容延伸到玻璃导航栏下方，留白让末项可滚出遮挡区
+          const SliverToBoxAdapter(child: SizedBox(height: Spacing.bottomSafe)),
         ],
       ),
     );
 
-    if (widget.embedded) {
-      // 导航栏已是 Scaffold.bottomNavigationBar，框架自动在导航栏之上布局，
-      // 不再需要为悬浮 Dock 手动留白。
-      return SafeArea(bottom: false, child: content);
-    }
-    return Scaffold(appBar: AppBar(title: const Text('调色盘')), body: content);
+    // 未连接设备：正文锁定为连接引导，功能不可用
+    return Scaffold(
+      appBar: AppTopBar(title: '调色盘'),
+      body: ListenableBuilder(
+        listenable: widget.viewModel,
+        builder: (context, _) => widget.viewModel.status.isConnected
+            ? content
+            : ConnectGuardView(onGoConnect: widget.onGoConnect),
+      ),
+    );
   }
 }
 
@@ -237,22 +248,9 @@ class _Heading extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 14, 18, 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('调色盘',
-              style: TextStyle(
-                  color: scheme.onSurface,
-                  fontSize: 26,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.4,
-                  height: 1.1)),
-          const SizedBox(height: 6),
-          Text('圆形色环选色或直接输入十六进制，选灯效即时应用。',
-              style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13, height: 1.55)),
-        ],
-      ),
+      padding: EdgeInsets.fromLTRB(Spacing.pageMargin, 14, Spacing.pageMargin, 16),
+      child: Text('圆形色环选色或直接输入十六进制，选灯效即时应用。',
+          style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13, height: 1.55)),
     );
   }
 }
@@ -436,7 +434,7 @@ class _SectionLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.only(top: 22, bottom: 0),
+      padding: EdgeInsets.only(top: Spacing.gap16, bottom: 0),
       child: Text(text,
           style: TextStyle(
               color: scheme.onSurfaceVariant,

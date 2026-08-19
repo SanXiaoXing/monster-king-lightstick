@@ -3,6 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_theme.dart';
+import '../../../../shared/theme/spacing.dart';
+import '../../../../shared/widgets/app_top_bar.dart';
+import '../../../../shared/widgets/connect_guard_view.dart';
 import '../../../../shared/widgets/slider_row.dart';
 import '../../../device/data/device_repository.dart';
 import '../../../device/presentation/device_view_model.dart';
@@ -20,12 +23,14 @@ import '../widgets/circular_visualizer.dart';
 /// 分析链路（对齐 docs/design/music.md 音乐调光设置）：
 /// record 采集 PCM → Rust `PcmAnalyzer` 分析帧 → Rust `MusicRhythm`
 /// 律动引擎（亮度 = 音量 × 灵敏度、15 色板循环换色）→ 荧光棒下发。
-/// 未采集时显示静默状态。`embedded=true` 时无 AppBar，由 Dock 壳托管。
+/// 未采集时显示静默状态。顶部统一用 [AppTopBar]；未连接设备时正文锁定为连接引导。
 class MusicPage extends StatefulWidget {
-  const MusicPage({super.key, required this.viewModel, this.embedded = false});
+  const MusicPage({super.key, required this.viewModel, this.onGoConnect});
 
   final DeviceViewModel viewModel;
-  final bool embedded;
+
+  /// 未连接时「去连接」按钮回调（Dock 宿主切换 Tab；独立页可不传）。
+  final VoidCallback? onGoConnect;
 
   @override
   State<MusicPage> createState() => _MusicPageState();
@@ -180,7 +185,7 @@ class _MusicPageState extends State<MusicPage> {
         slivers: [
           SliverToBoxAdapter(child: _Heading(active: _active)),
           SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 18),
+            padding: EdgeInsets.symmetric(horizontal: Spacing.pageMargin),
             sliver: SliverToBoxAdapter(
               child: Column(
                 children: [
@@ -211,16 +216,22 @@ class _MusicPageState extends State<MusicPage> {
               ),
             ),
           ),
+          // extendBody 下内容延伸到玻璃导航栏下方，留白让末项可滚出遮挡区
+          const SliverToBoxAdapter(child: SizedBox(height: Spacing.bottomSafe)),
         ],
       ),
     );
 
-    if (widget.embedded) {
-      // 导航栏已是 Scaffold.bottomNavigationBar，框架自动在导航栏之上布局，
-      // 不再需要为悬浮 Dock 手动留白。
-      return SafeArea(bottom: false, child: content);
-    }
-    return Scaffold(appBar: AppBar(title: const Text('音乐律动')), body: content);
+    // 未连接设备：正文锁定为连接引导，功能不可用
+    return Scaffold(
+      appBar: AppTopBar(title: '音乐律动'),
+      body: ListenableBuilder(
+        listenable: widget.viewModel,
+        builder: (context, _) => widget.viewModel.status.isConnected
+            ? content
+            : ConnectGuardView(onGoConnect: widget.onGoConnect),
+      ),
+    );
   }
 }
 
@@ -232,26 +243,18 @@ class _Heading extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 14, 18, 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: EdgeInsets.fromLTRB(Spacing.pageMargin, 14, Spacing.pageMargin, 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('音乐律动',
-                  style: TextStyle(
-                      color: scheme.onSurface,
-                      fontSize: 26,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.4,
-                      height: 1.1)),
-              _StatusDot(active: active),
-            ],
+          Expanded(
+            child: Text(
+                '音频实时驱动发光圆环：低频推动环体、高频细密振荡、强拍脉冲爆发。',
+                style: TextStyle(
+                    color: scheme.onSurfaceVariant, fontSize: 13, height: 1.55)),
           ),
-          const SizedBox(height: 6),
-          Text('音频实时驱动发光圆环：低频推动环体、高频细密振荡、强拍脉冲爆发。',
-              style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13, height: 1.55)),
+          const SizedBox(width: 12),
+          _StatusDot(active: active),
         ],
       ),
     );
@@ -344,14 +347,14 @@ class _ModeBtn extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Material(
       color: active ? AppColors.accentSoft : scheme.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(16),
       child: InkWell(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 11),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(color: active ? scheme.primary : scheme.outlineVariant),
           ),
           child: Column(
