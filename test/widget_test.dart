@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:wanshou/app/app.dart';
+import 'package:wanshou/features/home/presentation/widgets/glass_tab_bar.dart';
 
 void main() {
   // 音乐页可视化 Ticker 仅在监听时运行；统一用定长 pump 巡检，
@@ -16,6 +17,12 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
     }
   }
+
+  /// Dock 栏 Tab 文案（页面内 AppTopBar 标题与「设置」同名，需限定作用域）。
+  Finder dockTab(String label) => find.descendant(
+        of: find.byType(GlassTabBar),
+        matching: find.text(label),
+      );
 
   testWidgets('主页渲染与导航栏 Tab 切换', (WidgetTester tester) async {
     await tester.pumpWidget(const App());
@@ -30,14 +37,19 @@ void main() {
     expect(find.text('附近设备'), findsOneWidget);
 
     // 切到音乐页
-    await tester.tap(find.text('音乐'));
+    await tester.tap(dockTab('音乐'));
     await settle(tester);
     expect(find.text('音乐律动'), findsOneWidget);
 
     // 切到调色页
-    await tester.tap(find.text('调色'));
+    await tester.tap(dockTab('调色'));
     await settle(tester);
     expect(find.text('调色盘'), findsOneWidget);
+
+    // 切到设置页
+    await tester.tap(dockTab('设置'));
+    await settle(tester);
+    expect(find.text('管理设备、主题、灯光与音频偏好。'), findsOneWidget);
 
     // 卸载以释放页面资源
     await tester.pumpWidget(const SizedBox());
@@ -53,7 +65,7 @@ void main() {
 
     // 逐 Tab 巡检
     for (final label in ['连接', '调色', '音乐', '设置']) {
-      await tester.tap(find.text(label));
+      await tester.tap(dockTab(label));
       await settle(tester);
       // 页面应已打开且无布局异常
       expect(tester.takeException(), isNull, reason: '$label 页不应抛异常');

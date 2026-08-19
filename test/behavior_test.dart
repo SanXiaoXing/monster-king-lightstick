@@ -18,6 +18,7 @@ import 'package:wanshou/features/device/domain/device_state.dart';
 import 'package:wanshou/features/device/domain/lightstick.dart';
 import 'package:wanshou/features/device/presentation/device_view_model.dart';
 import 'package:wanshou/features/device/presentation/pages/device_page.dart';
+import 'package:wanshou/features/home/presentation/widgets/glass_tab_bar.dart';
 import 'package:wanshou/features/lighting/presentation/pages/color_picker_page.dart';
 import 'package:wanshou/features/lighting/presentation/pages/seat_binding_page.dart';
 import 'package:wanshou/features/settings/settings_page.dart';
@@ -40,6 +41,27 @@ class _FakeRepo extends DeviceRepository {
   @override
   Stream<DeviceConnectionState> connectionStateOf(Lightstick device) =>
       Stream.value(DeviceConnectionState.connected);
+
+  // 新 ViewModel 在 init 时重连已恢复设备并校验真实会话（防假连接状态）
+  @override
+  Future<void> connect(Lightstick device) async {}
+
+  @override
+  bool isConnected(Lightstick device) => connected;
+
+  // 首次进入自动搜索：扫描全链路也由 Fake 接管，避免触碰插件（测试环境
+  // 无平台实现，startScan 会抛 UnsupportedError 且污染全局 isScanning 状态）
+  @override
+  bool get isScanning => false;
+
+  @override
+  Future<void> startScan({Duration timeout = const Duration(seconds: 5)}) async {}
+
+  @override
+  Future<void> stopScan() async {}
+
+  @override
+  Stream<List<Lightstick>> get scanResults => const Stream.empty();
 }
 
 Future<DeviceViewModel> _vm({required bool connected}) async {
@@ -47,6 +69,12 @@ Future<DeviceViewModel> _vm({required bool connected}) async {
   await vm.init();
   return vm;
 }
+
+/// Dock 栏中的 Tab 文案（避开与页面内 AppTopBar 标题同名的重复匹配）。
+Finder _dockTab(String label) => find.descendant(
+      of: find.byType(GlassTabBar),
+      matching: find.text(label),
+    );
 
 Widget _wrap(Widget home) =>
     MaterialApp(theme: buildLightTheme(), home: home);
@@ -70,10 +98,9 @@ void main() {
     await tester.pumpWidget(const App());
     await tester.pump();
 
-    // 进入设置页
-    await tester.ensureVisible(find.text('设置'));
+    // 进入设置页（Dock 栏 Tab；页面内 AppTopBar 标题同名，需限定作用域）
     await tester.pumpAndSettle();
-    await tester.tap(find.text('设置'));
+    await tester.tap(_dockTab('设置'));
     await tester.pumpAndSettle();
 
     MaterialApp app() => tester.widget<MaterialApp>(find.byType(MaterialApp));
@@ -179,21 +206,19 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets('连接守卫：未连接点选灯效 → 提示，不触发下发', (tester) async {
+  testWidgets('连接守卫：未连接时调色页锁定为连接引导，不渲染灯效', (tester) async {
     final vm = await _vm(connected: false);
     addTearDown(vm.dispose);
     await tester.pumpWidget(_wrap(ColorPickerPage(viewModel: vm)));
     await tester.pump();
 
-    await tester.ensureVisible(find.text('呼吸'));
-    await tester.pump();
-    await tester.tap(find.text('呼吸'));
-    for (var i = 0; i < 4; i++) {
-      await tester.pump(const Duration(milliseconds: 50));
-    }
-
-    expect(find.text('请先在「连接」Tab 配对应援棒'), findsOneWidget);
-    // 未推入设备连接页，仍停留在调色页
+    // 正文被 ConnectGuardView 替换：提示文案 + 图标，无灯效网格
+    expect(find.text('尚未连接应援棒'), findsOneWidget);
+    expect(find.byIcon(Icons.bluetooth_disabled_rounded), findsOneWidget);
+    expect(find.text('呼吸'), findsNothing);
+    // 独立页未传 onGoConnect：不渲染「去连接」按钮
+    expect(find.text('去连接'), findsNothing);
+    // 未推入设备连接页
     expect(find.byType(DevicePage), findsNothing);
   });
 
@@ -249,18 +274,15 @@ void main() {
     expect(find.text('开始律动'), findsOneWidget);
   });
 
-  testWidgets('音乐律动：未连接切换模式 → 守卫提示', (tester) async {
+  testWidgets('音乐律动：未连接时正文锁定为连接引导', (tester) async {
     final vm = await _vm(connected: false);
     addTearDown(vm.dispose);
     await tester.pumpWidget(_wrap(MusicPage(viewModel: vm)));
     await tester.pump();
 
-    await tester.ensureVisible(find.text('七彩律动'));
-    await tester.pump();
-    await tester.tap(find.text('七彩律动'));
-    for (var i = 0; i < 4; i++) {
-      await tester.pump(const Duration(milliseconds: 50));
-    }
-    expect(find.text('请先在「连接」Tab 配对应援棒'), findsOneWidget);
+    // 未连接：ConnectGuardView 替换正文，律动控件不可见
+    expect(find.text('尚未连接应援棒'), findsOneWidget);
+    expect(find.text('七彩律动'), findsNothing);
+    expect(find.text('开始律动'), findsNothing);
   });
 }

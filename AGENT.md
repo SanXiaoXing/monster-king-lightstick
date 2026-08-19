@@ -100,7 +100,8 @@ lib/
 │   ├── error/app_exception.dart      # 统一异常 [骨架]
 │   └── storage/local_storage.dart    # 持久化 [已实现]（shared_preferences；主题模式已接入）
 ├── features/
-│   ├── home/presentation/pages/home_page.dart   # 主页 [已实现]（原型 home 屏：状态栏/连接胶囊/Logo/六宫格菜单）
+│   ├── home/presentation/pages/home_page.dart   # 主页 [已实现]（Liquid Glass 悬浮胶囊 Dock + 页面切换过渡）
+│   ├── home/presentation/widgets/glass_tab_bar.dart # 玻璃 Dock 导航栏 [已实现]（毛玻璃壳 + 选中态弹簧胶囊）
 │   ├── home/presentation/protocol_demo_page.dart # 协议验证页 [已实现]（设置页入口）
 │   ├── device/                       # data/domain/presentation [已实现：flutter_blue_plus 于 Repository 层]
 │   ├── lighting/                     # domain [骨架]；presentation：调色盘/座位绑定/灯光效果 [已实现]
@@ -108,6 +109,11 @@ lib/
 │   ├── settings/                     # settings_page.dart [已实现]（主题/设备/灯光/音频默认值，无占位项）；settings_store.dart [已实现]（默认值持久化，音乐页/调色页初始值）
 │   └── about/                        # tips_page 温馨提示 [已实现]；about_page [骨架]
 ├── shared/
+│   ├── theme/spacing.dart            # 统一间距系统（pageMargin/cardPadding/gap 档位）[已实现]
+│   ├── widgets/app_top_bar.dart      # 统一顶栏 AppTopBar [已实现]
+│   ├── widgets/app_icon_button.dart  # 顶栏图标按钮 36×36 [已实现]
+│   ├── widgets/card_decoration.dart  # 统一卡片圆角/描边 [已实现]
+│   ├── widgets/connect_guard_view.dart # 未连接引导视图（调色/音乐页）[已实现]
 │   ├── widgets/app_button.dart       # [骨架]
 │   ├── widgets/slider_row.dart       # 带标签滑杆行（亮度/灵敏度/速度共用）[已实现]
 │   └── components/color_picker.dart  # [骨架]
