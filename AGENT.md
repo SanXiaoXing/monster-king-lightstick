@@ -113,7 +113,8 @@ lib/
 │   ├── widgets/card_decoration.dart  # 统一卡片圆角/描边 [已实现]
 │   ├── widgets/connect_guard_view.dart # 未连接引导视图（调色/音乐页）[已实现]
 │   ├── widgets/brand_logo.dart       # 像素风品牌 Logo（CustomPaint 复刻 SVG）[已实现]
-│   └── widgets/slider_row.dart       # 带标签滑杆行（亮度/灵敏度共用）[已实现]
+│   ├── widgets/slider_row.dart       # 带标签滑杆行（亮度/灵敏度共用）[已实现]
+│   └── widgets/sliding_segment.dart  # 滑动分段选择器（主题/律动模式共用，临界阻尼胶囊）[已实现]
 ├── src/rust/                         # frb 生成，禁改
 └── main.dart                         # RustBridge.init + 存储/主题初始化 + runApp [已实现]
 ```
