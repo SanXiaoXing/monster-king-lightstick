@@ -103,7 +103,7 @@ lib/
 │   ├── home/presentation/widgets/glass_tab_bar.dart # 玻璃 Dock 导航栏 [已实现]（毛玻璃壳 + 选中态弹簧胶囊）
 │   ├── device/                       # data/domain/presentation [已实现：flutter_blue_plus 于 Repository 层]
 │   ├── lighting/                     # domain [已实现：LightingFx 枚举]；presentation：调色盘 [已实现：圆形色环 + hex + 亮度 + 8 灯效单列]
-│   ├── audio/                        # domain [已实现：AudioFrame/RhythmOutput 模型，分析已迁 Rust]；data [已实现：record 采集 + Rust 分析/律动]；presentation：音乐调光 [已实现]
+│   ├── audio/                        # domain [已实现：AudioFrame/RhythmOutput 模型，分析已迁 Rust]；data [已实现：record 采集 + Rust 分析/律动 + Android 前台服务保活（后台/锁屏持续监听，原生 AudioListeningService 配套，含电池优化豁免）]；presentation：音乐调光 [已实现]
 │   ├── settings/                     # settings_page.dart [已实现]（仅 4 项：显示模式滑动胶囊/已连接设备/温馨提示/关于）
 │   └── about/                        # tips_page 温馨提示 [已实现]
 ├── shared/

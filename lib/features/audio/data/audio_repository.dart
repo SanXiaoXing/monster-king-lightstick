@@ -6,6 +6,7 @@ import 'package:wanshou/src/rust/api/audio.dart' as frb_audio;
 import 'package:wanshou/src/rust/api/lightstick.dart' as frb_light;
 import 'package:wanshou/src/rust/lightstick/effect.dart' as frb_effect;
 
+import 'android_listen_service.dart';
 import '../domain/audio_analysis.dart';
 
 /// 音频数据访问边界：麦克风采集（record 插件）+ 分析（Rust，经 frb）。
@@ -19,6 +20,8 @@ import '../domain/audio_analysis.dart';
 /// 灯效输出交 [RhythmOutput] 由调用方下发荧光棒。
 class AudioRepository {
   final AudioRecorder _recorder = AudioRecorder();
+  // 后台持续监听保活：Android microphone 前台服务 + 唤醒锁（见其类注释）
+  final AndroidListenService _listenService = AndroidListenService();
 
   // Rust 引擎懒创建：start()/nextRhythm 首次调用时经 frb 构造
   // （RustLib 未初始化时静默失败，不阻塞 UI）。
@@ -54,6 +57,13 @@ class AudioRepository {
 
     try {
       final analyzer = await _ensureAnalyzer();
+      // 后台持续监听：先拉起 microphone 前台服务（Android 11+ 后台麦克风
+      // 限制 + 锁屏保活），再开始采集；采集失败时同步回收服务
+      await _listenService.start();
+      unawaited(_listenService.requestNotificationPermission());
+      // 电池优化豁免：防激进后台清理杀掉监听进程（弹窗可能盖在界面上，
+      // 异步不等待，用户可稍后处理）
+      unawaited(_listenService.requestIgnoreBatteryOptimizations());
       final pcm = await _recorder.startStream(const RecordConfig(
         encoder: AudioEncoder.pcm16bits,
         sampleRate: 44100,
@@ -86,6 +96,7 @@ class AudioRepository {
         },
       );
     } catch (e) {
+      await _listenService.stop();
       await controller.close();
       _controller = null;
       rethrow;
@@ -148,6 +159,8 @@ class AudioRepository {
     } catch (_) {
       // 未在采集时 stop 会抛错，忽略
     }
+    // 停止监听 → 回收前台服务与唤醒锁（锁屏/后台保活结束）
+    await _listenService.stop();
   }
 
   void dispose() {

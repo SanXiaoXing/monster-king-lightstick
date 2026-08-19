@@ -7,6 +7,15 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="30" />
     <!-- 麦克风：音乐律动频谱采集（record 插件，运行时申请） -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- 后台持续监听：microphone 前台服务（Android 11+ 后台麦克风限制，见 AudioListeningService） -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <!-- 息屏保活：PARTIAL_WAKE_LOCK 保证锁屏后 CPU 持续供数给 Rust 分析 -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Android 13+ 前台服务通知展示（拒绝不影响监听，仅通知栏不显示） -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- 电池优化豁免：防激进后台清理在切后台几秒内杀掉监听进程（用户可拒绝，不影响前台监听） -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <application
         android:label="宝宝剑"
         android:name="${applicationName}"
@@ -33,6 +42,12 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!-- 后台持续监听前台服务：仅"保活 + 持有麦克风权限"，音频采集仍在 Flutter 管线 -->
+        <service
+            android:name=".AudioListeningService"
+            android:exported="false"
+            android:foregroundServiceType="microphone"
+            android:stopWithTask="true" />
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
