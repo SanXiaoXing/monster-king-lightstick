@@ -121,7 +121,10 @@ ThemeData _buildTheme(Brightness brightness) {
       color: scheme.surfaceContainerLow,
       elevation: 0,
       margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: scheme.outlineVariant),
+      ),
     ),
     dividerTheme: DividerThemeData(color: scheme.outlineVariant, space: 1),
     inputDecorationTheme: InputDecorationTheme(
@@ -158,6 +161,29 @@ ThemeData _buildTheme(Brightness brightness) {
     ),
     bottomSheetTheme: const BottomSheetThemeData(
       backgroundColor: Colors.transparent,
+    ),
+    // 统一对话框外观（对齐 ui_layout_rules.md 第 10 节）：
+    // 底色 surfaceContainerLow、圆角 20；危险操作用 error 色由调用方指定。
+    dialogTheme: DialogThemeData(
+      backgroundColor: scheme.surfaceContainerLow,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      titleTextStyle: TextStyle(
+        color: scheme.onSurface,
+        fontSize: 17,
+        fontWeight: FontWeight.w700,
+      ),
+      contentTextStyle: TextStyle(
+        color: scheme.onSurfaceVariant,
+        fontSize: 14,
+        height: 1.5,
+      ),
+    ),
+    // 次/取消按钮用中性 fgMuted（对齐 ui_layout_rules.md 第 10 节）。
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        foregroundColor: scheme.onSurfaceVariant,
+        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+      ),
     ),
   );
 }

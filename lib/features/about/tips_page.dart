@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../shared/theme/spacing.dart';
+import '../../shared/widgets/app_top_bar.dart';
+
 /// 温馨提示页（主页「温馨提示」入口）。
 ///
 /// 使用安全提示静态列表，内容与原型一致。
@@ -19,25 +22,25 @@ class TipsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('温馨提示')),
+      appBar: AppTopBar(title: '温馨提示'),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(Spacing.pageMargin),
         children: [
           for (final (emoji, title, desc) in _tips)
             Card(
-              margin: const EdgeInsets.only(bottom: 10),
+              margin: const EdgeInsets.only(bottom: Spacing.gap12),
               child: Padding(
-                padding: const EdgeInsets.all(14),
+                padding: EdgeInsets.all(Spacing.cardPadding),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                      width: 40,
-                      height: 40,
+                      width: 36,
+                      height: 36,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         color: scheme.primaryContainer,
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(emoji, style: const TextStyle(fontSize: 20)),
                     ),

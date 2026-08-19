@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/router/app_router.dart';
+import '../../../../shared/widgets/app_top_bar.dart';
 import '../../../../shared/widgets/slider_row.dart';
 import '../../../device/presentation/device_view_model.dart';
 import '../../../device/presentation/pages/device_page.dart';
@@ -60,7 +61,7 @@ class _FxPageState extends State<FxPage> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('灯光效果')),
+      appBar: AppTopBar(title: '灯光效果'),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
@@ -126,14 +127,14 @@ class _FxTile extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Material(
       color: selected ? scheme.primaryContainer : scheme.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(16),
       child: InkWell(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: selected ? scheme.primary : scheme.outlineVariant,
               width: selected ? 1.5 : 1,
