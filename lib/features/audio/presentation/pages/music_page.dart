@@ -195,6 +195,11 @@ class _MusicPageState extends State<MusicPage> {
                     sensitivity: _sensitivity,
                     mode: _mode,
                   ),
+                  const SizedBox(height: 14),
+                  _MusicSwitchRow(
+                    active: _active,
+                    onToggle: _toggle,
+                  ),
                   const SizedBox(height: 18),
                   SliderRow(
                     label: '节奏灵敏度',
@@ -206,12 +211,7 @@ class _MusicPageState extends State<MusicPage> {
                     },
                   ),
                   const SizedBox(height: 18),
-                  _ModeRow(selected: _mode, onPick: _onMode),
-                  const SizedBox(height: 16),
-                  _ToggleBtn(
-                    active: _active,
-                    onTap: _toggle,
-                  ),
+                  _ModePill(selected: _mode, onPick: _onMode),
                 ],
               ),
             ),
@@ -294,50 +294,60 @@ class _StatusDot extends StatelessWidget {
   }
 }
 
-class _ModeRow extends StatelessWidget {
-  const _ModeRow({required this.selected, required this.onPick});
+/// 律动模式：1×4 段按钮（prototype_redesign `.mode-pill` 的 Flutter 同构）。
+/// 外层 pill 容器 + 4 px 内距，每个 cell 仅文字标签（不带 icon）；
+/// 选中：accent 填充 + 白字 + 阴影，未选：透明 + muted 字。
+/// `value` 保留 Rust 律动引擎所需的完整模式名（如「单色律动」），
+/// `label` 是短显名（与 prototype 的「单色 / 七彩 / 强烈 / 柔和」一致）。
+/// 功能不变：mode 状态机、SettingsStore 读写路径不变。
+class _ModePill extends StatelessWidget {
+  const _ModePill({required this.selected, required this.onPick});
   final String selected;
   final void Function(String) onPick;
 
-  static const _modes = <(String, IconData)>[
-    ('单色律动', Icons.tonality_rounded),
-    ('七彩律动', Icons.auto_awesome_rounded),
-    ('强烈', Icons.flash_on_rounded),
-    ('柔和', Icons.spa_rounded),
+  static const _modes = <(String, String)>[
+    ('单色律动', '单色'),
+    ('七彩律动', '七彩'),
+    ('强烈', '强烈'),
+    ('柔和', '柔和'),
   ];
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        for (final (name, icon) in _modes)
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.only(
-                right: name == _modes.last.$1 ? 0 : 8,
-              ),
-              child: _ModeBtn(
-                icon: icon,
-                label: name,
-                active: selected == name,
-                onTap: () => onPick(name),
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Row(
+        children: [
+          for (final (value, label) in _modes)
+            Expanded(
+              child: _ModePillCell(
+                value: value,
+                label: label,
+                active: selected == value,
+                onTap: () => onPick(value),
               ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }
 
-class _ModeBtn extends StatelessWidget {
-  const _ModeBtn({
-    required this.icon,
+class _ModePillCell extends StatelessWidget {
+  const _ModePillCell({
+    required this.value,
     required this.label,
     required this.active,
     required this.onTap,
   });
 
-  final IconData icon;
+  final String value;
   final String label;
   final bool active;
   final VoidCallback onTap;
@@ -345,29 +355,41 @@ class _ModeBtn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Material(
-      color: active ? AppColors.accentSoft : scheme.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+    return Semantics(
+      label: '律动模式：$value',
+      selected: active,
+      button: true,
+      child: GestureDetector(
         onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 11),
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          padding: const EdgeInsets.symmetric(vertical: 9),
+          alignment: Alignment.center,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: active ? scheme.primary : scheme.outlineVariant),
+            color: active ? scheme.primary : Colors.transparent,
+            borderRadius: BorderRadius.circular(999),
+            boxShadow: active
+                ? [
+                    BoxShadow(
+                      color: scheme.primary.withValues(alpha: 0.32),
+                      blurRadius: 14,
+                      offset: const Offset(0, 6),
+                    )
+                  ]
+                : null,
           ),
-          child: Column(
-            children: [
-              Icon(icon, size: 18, color: scheme.primary),
-              const SizedBox(height: 4),
-              Text(label,
-                  style: TextStyle(
-                    color: scheme.onSurface,
-                    fontSize: 11,
-                    fontWeight: active ? FontWeight.w600 : FontWeight.w400,
-                  )),
-            ],
+          child: AnimatedDefaultTextStyle(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.4,
+              color: active ? Colors.white : scheme.onSurfaceVariant,
+            ),
+            child: Text(label),
           ),
         ),
       ),
@@ -375,26 +397,113 @@ class _ModeBtn extends StatelessWidget {
   }
 }
 
-class _ToggleBtn extends StatelessWidget {
-  const _ToggleBtn({required this.active, required this.onTap});
+/// 音乐响应开关行：prototype_redesign 中 `.switch-row` 的 Flutter 同构。
+/// 左侧大标题 + 副标题（静态展示，仅作上下文），右侧 iOS 风格 51×31 开关。
+/// 整体不接 InkWell，仅开关接 _toggle()，与 prototype "只点开关才翻转" 的行为等价。
+class _MusicSwitchRow extends StatelessWidget {
+  const _MusicSwitchRow({required this.active, required this.onToggle});
   final bool active;
-  final VoidCallback onTap;
+  final VoidCallback onToggle;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return SizedBox(
-      width: double.infinity,
-      child: FilledButton.icon(
-        onPressed: onTap,
-        style: FilledButton.styleFrom(
-          backgroundColor: active ? scheme.primary : scheme.surfaceContainerHigh,
-          foregroundColor: active ? Colors.white : scheme.onSurface,
-          minimumSize: const Size.fromHeight(50),
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '音乐响应',
+                  style: TextStyle(
+                    color: scheme.onSurface,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -0.05,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  '开启后跟随环境音量',
+                  style: TextStyle(
+                    color: scheme.onSurfaceVariant,
+                    fontSize: 11,
+                    letterSpacing: 0.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          _IosSwitch(active: active, onTap: onToggle),
+        ],
+      ),
+    );
+  }
+}
+
+/// iOS 风格开关（51×31 px，与 prototype_redesign `.switch` 严格对齐）。
+/// 轨道：未开 `rgba(126,141,166,.32)`，开启 `scheme.primary`；
+/// 旋钮：27 px 白色圆，偏移 20 px，开启时回弹 easeOutBack。
+class _IosSwitch extends StatelessWidget {
+  const _IosSwitch({required this.active, required this.onTap});
+  final bool active;
+  final VoidCallback onTap;
+
+  static const double _trackW = 51;
+  static const double _trackH = 31;
+  static const double _knob = 27;
+  static const Color _trackInactive = Color(0x527E8DA6); // rgba(126,141,166,.32)
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Semantics(
+      label: '音乐响应',
+      toggled: active,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          width: _trackW,
+          height: _trackH,
+          decoration: BoxDecoration(
+            color: active ? scheme.primary : _trackInactive,
+            borderRadius: BorderRadius.circular(_trackH / 2),
+          ),
+          padding: const EdgeInsets.all(2),
+          child: AnimatedAlign(
+            duration: const Duration(milliseconds: 320),
+            curve: Curves.easeOutBack,
+            alignment: active ? Alignment.centerRight : Alignment.centerLeft,
+            child: Container(
+              width: _knob,
+              height: _knob,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x4D000000),
+                    blurRadius: 6,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
-        icon: Icon(active ? Icons.pause_rounded : Icons.play_arrow_rounded, size: 20),
-        label: Text(active ? '暂停律动' : '开始律动',
-            style: const TextStyle(fontWeight: FontWeight.w600, letterSpacing: 0.3)),
       ),
     );
   }
