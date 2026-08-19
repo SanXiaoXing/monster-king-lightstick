@@ -105,7 +105,7 @@ lib/
 │   ├── device/                       # data/domain/presentation [已实现：flutter_blue_plus 于 Repository 层]
 │   ├── lighting/                     # domain [骨架]；presentation：调色盘/座位绑定/灯光效果 [已实现]
 │   ├── audio/                        # domain [已实现：AudioFrame/RhythmOutput 模型，分析已迁 Rust]；data [已实现：record 采集 + Rust 分析/律动]；presentation：音乐调光 [已实现]
-│   ├── settings/settings_page.dart   # [已实现]（主题切换/灯光效果入口/协议验证/清除设备）
+│   ├── settings/                     # settings_page.dart [已实现]（主题/设备/灯光/音频默认值，无占位项）；settings_store.dart [已实现]（默认值持久化，音乐页/调色页初始值）
 │   └── about/                        # tips_page 温馨提示 [已实现]；about_page [骨架]
 ├── shared/
 │   ├── widgets/app_button.dart       # [骨架]
