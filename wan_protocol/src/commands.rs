@@ -1,14 +1,20 @@
-//! 命令字表：9 种灯光效果 / 座位写 / 防伪指令 / 闪光特效。
+//! 命令字表：9 种官方灯光效果 + 座位写 / 防伪指令 / 闪光特效。
 //!
 //! 对应：
 //! - `chunk_2.appservice.js:123`（lighting 页 `functionalInstructions`）
 //! - `chunk_3.appservice.js:152` / `chunk_8.appservice.js:129`（seatbind / glowdetail 的 `writeSeatInfo`）
 //! - `appservice.app.js:845`（ble-manager `_verifyAntiFake` 指令构造）
+//!
+//! 自定义效果（如 `Flow`）不在本模块实现，见 [`crate::effects`]。
 
 use crate::hexutil::{bytes_to_hex, dec2hex, hex_to_bytes, little_endian};
 use crate::frame_seq_hex_le;
 
-/// 9 种灯光效果。对应 lighting 页 case 0~8。
+/// 9 种官方灯光效果 + 1 种自定义流光效果。
+///
+/// 官方效果对应 lighting 页 case 0~8（已在真机抓包验证）。
+/// `Flow = 9` 仅为本项目本地效果枚举，不对应官方小程序的功能枚举；
+/// 其命令体复用官方 0x40 帧结构，但字段语义为自定义（见 [`crate::effects::flow`]）。
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum LightingEffect {
     BlackScreen = 0,    // 黑屏
@@ -20,6 +26,8 @@ pub enum LightingEffect {
     Party = 6,          // 聚会（循环）
     Rainbow = 7,        // 彩虹（循环）
     StarrySky = 8,      // 星空
+    /// 自定义流光（非官方枚举，仅本项目）。
+    Flow = 9,
 }
 
 /// 座位绑定成功后的固定"闪光"特效包（已含帧序号与 CRC）。
@@ -66,6 +74,11 @@ pub fn lighting_command_body<F: FnMut() -> u8>(
             }
             s
         }
+        LightingEffect::Flow => {
+            // 自定义流光：复用官方 0x40 帧结构，字段语义为自定义设计，
+            // 实现与文档见 crate::effects::flow（实验性，待真机验证）。
+            crate::effects::flow::flow_command_body(seed, color_hex)
+        }
     }
 }
 
@@ -84,8 +97,9 @@ fn reunion_group<F: FnMut() -> u8>(rand_fill: &mut F) -> String {
 /// randompatternGroup：3 字节 = dim(1B) + mode(1B) + (0<<4 | configindex)(1B)。
 /// `t` = floor(3*rand)+1（1..3）；mode = parseInt(e + "0001", 2)，e 由 t 决定。
 fn randompattern_group<F: FnMut() -> u8>(rand_fill: &mut F) -> String {
-    // 简化：t∈1..3，e(t=1)="0100", t=2="1000", t=3="1100"
-    let t = (rand_fill() % 3) + 1; // 1..3（用 rand_fill 近似 Math.floor(3*random)+1）
+    // t∈1..3，e(t=1)="0100", t=2="1000", t=3="1100"
+    // 用 (rand*3)/256 近似 JS 的 floor(3*random)，避免取模偏差（0..255 % 3 分布不均）
+    let t = ((rand_fill() as u16 * 3) / 256) as u8 + 1; // 1..3
     let e_bits: u8 = match t {
         1 => 0b0100_0001, // "0100"+"0001" = 0x41
         2 => 0b1000_0001, // 0x81
@@ -236,6 +250,14 @@ mod tests {
     fn party_body_has_header_and_7_groups() {
         let body = lighting_command_body(LightingEffect::Party, "", 0x42, || 0);
         // 40 + 42 + ff (6 hex = 3 字节头) + 7 组 × 6 hex = 6 + 42 = 48 hex = 24 字节
+        assert_eq!(body.len(), 48);
+        assert!(body.starts_with("4042ff"));
+    }
+
+    #[test]
+    fn flow_body_has_header_and_7_groups() {
+        let body = lighting_command_body(LightingEffect::Flow, "ff0000", 0x42, || 0);
+        // 40 + 42 + ff (6 hex) + 7 组 × 6 hex = 48 hex = 24 字节
         assert_eq!(body.len(), 48);
         assert!(body.starts_with("4042ff"));
     }

@@ -47,6 +47,7 @@ class _ColorPickerPageState extends State<ColorPickerPage> {
 
   @override
   void dispose() {
+    _repo.stopFlow(); // 离开调色页停止流光循环，避免后台持续写 BLE
     _colorDebounce?.cancel();
     _hexCtrl.dispose();
     super.dispose();
@@ -114,7 +115,12 @@ class _ColorPickerPageState extends State<ColorPickerPage> {
     if (_colorSending) return;
     _colorSending = true;
     try {
-      await _send(_fx, silentErrors: true);
+      if (_fx == LightingFx.flow) {
+        // 流光：拖动期间只更新基准色，连续帧循环由 Repository 自持
+        _repo.updateFlow(color: _color, brightness: _brightness);
+      } else {
+        await _send(_fx, silentErrors: true);
+      }
     } finally {
       _colorSending = false;
     }
@@ -134,12 +140,19 @@ class _ColorPickerPageState extends State<ColorPickerPage> {
     }
     if (!_ensureConnected()) return;
     try {
-      await _repo.sendEffect(
-        device,
-        fx: fx,
-        color: _color,
-        brightness: _brightness,
-      );
+      if (fx == LightingFx.flow) {
+        // 流光：启动连续帧循环（帧→100ms→清除帧→100ms→下一帧，见 style.md §7）
+        _repo.startFlow(device, color: _color, brightness: _brightness);
+      } else {
+        // 切到其他效果：先停掉流光循环，再单帧下发
+        _repo.stopFlow();
+        await _repo.sendEffect(
+          device,
+          fx: fx,
+          color: _color,
+          brightness: _brightness,
+        );
+      }
       if (announce && mounted) {
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
@@ -459,6 +472,7 @@ class _EffectList extends StatelessWidget {
     (LightingFx.party, Icons.celebration_rounded, '随机'),
     (LightingFx.rainbow, Icons.gradient_rounded, '15 色循环'),
     (LightingFx.starrySky, Icons.star_rounded, '随机闪烁'),
+    (LightingFx.flow, Icons.swipe_rounded, '沿棒流动'),
     (LightingFx.blackScreen, Icons.nightlight_rounded, '关机'),
   ];
 

@@ -13,6 +13,7 @@
 //! - [`ed25519_sig`] — Ed25519 防伪验签
 //! - [`packet`] — BLE 命令包构造 `[帧序号 4B LE][命令体][CRC32 4B LE]`
 //! - [`commands`] — 命令字表（9 种灯光效果 / 座位写 / 防伪指令 / OTA）
+//! - [`effects`] — 自定义灯光效果引擎（非官方协议，实验性）
 //! - [`broadcast`] — 广播烧录协议（Android manufacturerData / iOS serviceUuids XOR）
 //! - [`ota`] — OTA 分包包构造
 
@@ -21,6 +22,7 @@ pub mod broadcast;
 pub mod commands;
 pub mod crc32;
 pub mod ed25519_sig;
+pub mod effects;
 pub mod hexutil;
 pub mod ota;
 pub mod packet;

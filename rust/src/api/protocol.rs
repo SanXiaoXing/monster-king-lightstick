@@ -5,7 +5,7 @@
 //! OTA 等）仍完整保留在 [`wan_protocol`] crate（61 测试验证资产），
 //! 但不再暴露 FRB 导出，避免生成代码膨胀；需要时按需补回薄包装。
 
-/// 9 种灯光效果。frb 生成对应 Dart 枚举。
+/// 10 种灯光效果。frb 生成对应 Dart 枚举。
 #[derive(Clone, Copy, Debug)]
 pub enum LightingEffect {
     BlackScreen,  // 黑屏
@@ -17,6 +17,7 @@ pub enum LightingEffect {
     Party,        // 聚会
     Rainbow,      // 彩虹
     StarrySky,    // 星空
+    Flow,         // 流光（自定义：光带沿灯棒流动）
 }
 
 /// hex 字符串 → 字节。
@@ -41,6 +42,7 @@ pub fn lighting_command_body(effect: LightingEffect, color_hex: String, seed: u8
         LightingEffect::Party => crate::protocol::commands::LightingEffect::Party,
         LightingEffect::Rainbow => crate::protocol::commands::LightingEffect::Rainbow,
         LightingEffect::StarrySky => crate::protocol::commands::LightingEffect::StarrySky,
+        LightingEffect::Flow => crate::protocol::commands::LightingEffect::Flow,
     };
     crate::protocol::lighting_command_body(e, &color_hex, seed, rand::random::<u8>)
 }

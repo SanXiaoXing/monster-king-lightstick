@@ -19,7 +19,7 @@ Future<String>  buildPacket({required int seq , required String commandBodyHex }
 /// 灯光效果命令体（随机源为 Party/Rainbow/Starry 等效果的 seed）。
 Future<String>  lightingCommandBody({required LightingEffect effect , required String colorHex , required int seed }) => RustLib.instance.api.crateApiProtocolLightingCommandBody(effect: effect, colorHex: colorHex, seed: seed);
 
-            /// 9 种灯光效果。frb 生成对应 Dart 枚举。
+            /// 10 种灯光效果。frb 生成对应 Dart 枚举。
 enum LightingEffect {
                     blackScreen,
 constantlyOn,
@@ -30,6 +30,7 @@ breathe,
 party,
 rainbow,
 starrySky,
+flow,
                     ;
                     
                 }

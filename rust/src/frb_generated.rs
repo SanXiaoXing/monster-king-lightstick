@@ -653,6 +653,7 @@ impl SseDecode for crate::api::protocol::LightingEffect {
             6 => crate::api::protocol::LightingEffect::Party,
             7 => crate::api::protocol::LightingEffect::Rainbow,
             8 => crate::api::protocol::LightingEffect::StarrySky,
+            9 => crate::api::protocol::LightingEffect::Flow,
             _ => unreachable!("Invalid variant for LightingEffect: {}", inner),
         };
     }
@@ -879,6 +880,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::protocol::LightingEffect {
             Self::Party => 6.into_dart(),
             Self::Rainbow => 7.into_dart(),
             Self::StarrySky => 8.into_dart(),
+            Self::Flow => 9.into_dart(),
             _ => unreachable!(),
         }
     }
@@ -1015,6 +1017,7 @@ impl SseEncode for crate::api::protocol::LightingEffect {
                 crate::api::protocol::LightingEffect::Party => 6,
                 crate::api::protocol::LightingEffect::Rainbow => 7,
                 crate::api::protocol::LightingEffect::StarrySky => 8,
+                crate::api::protocol::LightingEffect::Flow => 9,
                 _ => {
                     unimplemented!("");
                 }

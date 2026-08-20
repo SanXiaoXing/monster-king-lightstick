@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:wanshou/src/rust/api/protocol.dart' as frb;
 
@@ -39,6 +41,86 @@ class LightingRepository {
     await _deviceRepository.writeCommand(device, bytes);
   }
 
+  // ---- 流光（Flow）连续帧循环 ----
+  //
+  // 按 docs/design/style.md 第七节的官方节奏：
+  //   流光帧 → 100ms → 黑屏清除帧 → 100ms → 下一帧（seed 递增 → 光带移动）
+  // 两次 BLE 写入间隔 100ms，满足官方 sendBlueData 的 lastWriteTime 限制。
+
+  Timer? _flowTimer;
+  bool _flowRunning = false;
+  int _flowSeed = 0;
+  Lightstick? _flowDevice;
+  String _flowColorHex = '0A84FF';
+
+  /// 启动流光：按官方 cycleReunion 节奏循环发送，直到 [stopFlow]。
+  void startFlow(
+    Lightstick device, {
+    required Color color,
+    double brightness = 1,
+  }) {
+    _flowDevice = device;
+    _flowColorHex = _scaledRgb(color, brightness);
+    _flowRunning = true;
+    _flowSeed = 0;
+    _flowTimer?.cancel();
+    _flowTick();
+  }
+
+  /// 更新流光基准色（不打断循环，拖动色环/亮度时调用）。
+  void updateFlow({required Color color, double brightness = 1}) {
+    _flowColorHex = _scaledRgb(color, brightness);
+  }
+
+  /// 停止流光循环。
+  void stopFlow() {
+    _flowRunning = false;
+    _flowTimer?.cancel();
+    _flowTimer = null;
+  }
+
+  void _flowTick() {
+    if (!_flowRunning || _flowDevice == null) return;
+    _sendFlowFrame();
+    _flowTimer = Timer(const Duration(milliseconds: 100), () {
+      _sendFlowClear();
+      _flowTimer = Timer(const Duration(milliseconds: 100), _flowTick);
+    });
+  }
+
+  /// 发送一帧流光（seed 递增 → Rust 侧光带沿 7 组移动）。
+  Future<void> _sendFlowFrame() async {
+    final device = _flowDevice;
+    if (device == null) return;
+    try {
+      final body = await frb.lightingCommandBody(
+        effect: frb.LightingEffect.flow,
+        colorHex: _flowColorHex,
+        seed: _flowSeed & 0xFF,
+      );
+      _flowSeed++;
+      final packet = await frb.buildPacket(seq: _nextSeq(), commandBodyHex: body);
+      final bytes = await frb.hexToBytes(hex: packet);
+      await _deviceRepository.writeCommand(device, bytes);
+    } catch (_) {
+      // 写失败（如断开）静默停止循环，避免无意义重试
+      stopFlow();
+    }
+  }
+
+  /// 发送黑屏清除帧（官方 cycleReunion 的 a+"00000000"）。
+  Future<void> _sendFlowClear() async {
+    final device = _flowDevice;
+    if (device == null) return;
+    try {
+      final packet = await frb.buildPacket(seq: _nextSeq(), commandBodyHex: '00000000');
+      final bytes = await frb.hexToBytes(hex: packet);
+      await _deviceRepository.writeCommand(device, bytes);
+    } catch (_) {
+      stopFlow();
+    }
+  }
+
   /// 域枚举 → frb 枚举（同名一一对应）。
   frb.LightingEffect _toFrb(LightingFx fx) => switch (fx) {
         LightingFx.blackScreen => frb.LightingEffect.blackScreen,
@@ -50,6 +132,7 @@ class LightingRepository {
         LightingFx.party => frb.LightingEffect.party,
         LightingFx.rainbow => frb.LightingEffect.rainbow,
         LightingFx.starrySky => frb.LightingEffect.starrySky,
+        LightingFx.flow => frb.LightingEffect.flow,
       };
 
   /// Color → 6 hex RGB（协议格式），亮度线性缩放。

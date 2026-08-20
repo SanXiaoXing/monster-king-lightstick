@@ -1,4 +1,4 @@
-// 灯光效果领域模型（9 种，对齐 PROTOCOL.md 命令字表 6.1）。
+// 灯光效果领域模型（10 种，对齐 PROTOCOL.md 命令字表 6.1 + 自定义流光）。
 //
 // 纯 Dart 领域枚举，不依赖 frb 生成代码；Repository 负责映射到
 // Rust 侧 LightingEffect 并构造命令。
@@ -11,7 +11,8 @@ enum LightingFx {
   breathe('呼吸'),
   party('聚会'),
   rainbow('彩虹'),
-  starrySky('星空');
+  starrySky('星空'),
+  flow('流光');
 
   const LightingFx(this.label);
 
